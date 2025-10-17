@@ -1,0 +1,82 @@
+.seasons-list {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.season-link, .season-link:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+.season-card {
+  width: 150px;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.season-card:hover {
+  transform: translateY(-5px);
+}
+
+.season-card .card-img-top {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background-color: #eee;
+}
+
+.details-poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}
+
+.details-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  font-weight: bold;
+  border: 1px dashed #ced4da;
+}
+
+.availability-table td {
+  vertical-align: middle;
+}
+
+@media (max-width: 767px) {
+  .availability-table thead {
+    display: none;
+  }
+
+  .availability-table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+  }
+
+  .availability-table td {
+    display: block;
+    text-align: right;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    padding-left: 50%;
+  }
+  
+  .availability-table td:last-child {
+    border-bottom: none;
+  }
+
+  .availability-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0.75rem;
+    width: 45%;
+    text-align: left;
+    font-weight: bold;
+  }
+}

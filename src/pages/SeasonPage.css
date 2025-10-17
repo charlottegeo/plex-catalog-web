@@ -1,0 +1,21 @@
+.episode-list .episode-card {
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid var(--gray-300, #dee2e6);
+}
+
+.episode-list .episode-card:last-child {
+  border-bottom: none;
+}
+
+.episode-thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 0.25rem;
+}
+
+.breadcrumb .btn-link {
+  vertical-align: baseline;
+}

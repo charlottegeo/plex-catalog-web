@@ -15,7 +15,7 @@ const InfoSpinner: React.FC<InfoSpinnerProps> = ({
   return (
     <div className={`spinner-container ${isCentered ? "centered" : ""}`}>
       <Spinner size={"sm"} color="primary">
-        <span className="sr-only">Loading...</span>
+        Loading...
       </Spinner>
       <span className="spinner-text">{children ?? ""}</span>
     </div>

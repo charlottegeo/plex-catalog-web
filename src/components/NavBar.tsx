@@ -9,7 +9,6 @@ import {
 } from "reactstrap";
 import {NavLink} from "react-router-dom";
 import Profile from "./Profile";
-import ThemeToggle from "./ThemeToggle";
 
 const NavBar: React.FunctionComponent = () => {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
@@ -23,7 +22,7 @@ const NavBar: React.FunctionComponent = () => {
       <Navbar color="primary" dark expand="lg">
         <Container>
           <NavLink to="/" className={"navbar-brand"}>
-            CSH React Boilerplate
+            Plex Catalog
           </NavLink>
           <NavbarToggler onClick={toggle} />
           <Collapse isOpen={isOpen} navbar>
@@ -40,7 +39,6 @@ const NavBar: React.FunctionComponent = () => {
             <Nav navbar className="ml-auto">
               <Profile />
               <NavItem className="nav-link">
-                <ThemeToggle />
               </NavItem>
             </Nav>
           </Collapse>

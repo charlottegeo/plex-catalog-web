@@ -38,7 +38,6 @@ const Profile: React.FunctionComponent = () => {
           height={32}
         />
         ({userInfo.preferred_username})
-        <span className="caret" />
       </DropdownToggle>
       <DropdownMenu>
         {

@@ -14,4 +14,14 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    port: 8080,
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'https://plex-catalog-backend-plex-catalog.apps.okd4.csh.rit.edu',
+        changeOrigin: true,
+      }
+    }
+  }
 });
