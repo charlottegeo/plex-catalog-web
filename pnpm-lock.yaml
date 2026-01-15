@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@axa-fr/react-oidc':
-    specifier: ^7.22.29
-    version: 7.22.32(react@18.3.1)
+    specifier: ^7.26.0
+    version: 7.26.0(react@18.3.1)
   csh-material-bootstrap:
     specifier: ^4.6.2
     version: 4.6.2
@@ -79,25 +79,25 @@ devDependencies:
 
 packages:
 
-  /@axa-fr/oidc-client-service-worker@7.22.32:
-    resolution: {integrity: sha512-MSD2QRngDRBrKeFggwOsKqQo5IQgOLMvQPCDNBWR/XCBfqJlyLjlfgZ9CXA1sWBBbps8FND1D41ztLjuP7btTA==}
+  /@axa-fr/oidc-client-service-worker@7.26.0:
+    resolution: {integrity: sha512-g1KkG9bgkezaVLOn+j4zzKDlUihdDeTuG5tetX4AvDJZpmESRx3x8+PJ7HI+414z6da0iigAlHS+bBdmBgRn3g==}
     dev: false
 
-  /@axa-fr/oidc-client@7.22.32:
-    resolution: {integrity: sha512-BMRMyMKVWoKalGQwxivt1VHXDlTo4rF3A/lgX9YnkjlpPktERFvqtV7Ozjlp6CM+a39cWjHCmnw7bVl6YokYRQ==}
+  /@axa-fr/oidc-client@7.26.0:
+    resolution: {integrity: sha512-atWufzZ/JOtZUtHkDxVMVqV4yba3sGcZKTSK0tgoACYjmBnYG8wTEIW76wNxZF2nFYAhocyEGzaZrucfKchWqA==}
     requiresBuild: true
     dependencies:
-      '@axa-fr/oidc-client-service-worker': 7.22.32
+      '@axa-fr/oidc-client-service-worker': 7.26.0
     dev: false
 
-  /@axa-fr/react-oidc@7.22.32(react@18.3.1):
-    resolution: {integrity: sha512-r5MhviWUSY3nch7nrQRkiwc2+ipfiAPQNIKae2BHC2eSBiu3QDeQL6BYlshWbdOF0Iggzg8Y4chj89k5UJoALg==}
+  /@axa-fr/react-oidc@7.26.0(react@18.3.1):
+    resolution: {integrity: sha512-0ORG8oR6iMqPmkCFv4+6e+07y141dxkjXg0xwqXxT67MkSQh4s6eRBnpzr01XlLA1j3eWke3sMHLeA0dY68cVQ==}
     requiresBuild: true
     peerDependencies:
-      react: ^17.0.0 || ^18.0.0
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
     dependencies:
-      '@axa-fr/oidc-client': 7.22.32
-      '@axa-fr/oidc-client-service-worker': 7.22.32
+      '@axa-fr/oidc-client': 7.26.0
+      '@axa-fr/oidc-client-service-worker': 7.26.0
       react: 18.3.1
     dev: false
 

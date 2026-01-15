@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@axa-fr/react-oidc": "^7.22.29",
+    "@axa-fr/react-oidc": "^7.26.0",
     "csh-material-bootstrap": "^4.6.2",
     "material-icons": "^1.13.12",
     "powerhooks": "^1.0.15",
