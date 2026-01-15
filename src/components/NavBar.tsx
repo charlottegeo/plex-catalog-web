@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   Collapse,
   Container,
@@ -6,9 +6,9 @@ import {
   Navbar,
   NavbarToggler,
   NavItem,
-} from "reactstrap";
-import {NavLink} from "react-router-dom";
-import Profile from "./Profile";
+} from 'reactstrap';
+import { NavLink } from 'react-router-dom';
+import Profile from './Profile';
 
 const NavBar: React.FunctionComponent = () => {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
@@ -21,7 +21,7 @@ const NavBar: React.FunctionComponent = () => {
     <div>
       <Navbar color="primary" dark expand="lg">
         <Container>
-          <NavLink to="/" className={"navbar-brand"}>
+          <NavLink to="/" className={'navbar-brand'}>
             Plex Catalog
           </NavLink>
           <NavbarToggler onClick={toggle} />
@@ -38,8 +38,7 @@ const NavBar: React.FunctionComponent = () => {
             </Nav>
             <Nav navbar className="ml-auto">
               <Profile />
-              <NavItem className="nav-link">
-              </NavItem>
+              <NavItem className="nav-link"></NavItem>
             </Nav>
           </Collapse>
         </Container>

@@ -33,16 +33,21 @@ type Server = {
 type Library = {
   key: string;
   title: string;
-}
+};
 
 type FilterType = 'all' | 'movie' | 'show';
-type SortType = 'default' | 'title-asc' | 'title-desc' | 'year-desc' | 'year-asc';
+type SortType =
+  | 'default'
+  | 'title-asc'
+  | 'title-desc'
+  | 'year-desc'
+  | 'year-asc';
 
 const Home = () => {
-    // const {idToken, idTokenPayload} = useOidcIdToken(); // this is how you get the users id token
-    // const {login, logout, isAuthenticated} = useOidc(); // this gets the functions to login and logout and the logout state
-    // const {accessTokenPayload} = useOidcAccessToken(); // this contains the user info in raw json format
-    // const userInfo = accessTokenPayload as UserInfo;
+  // const {idToken, idTokenPayload} = useOidcIdToken(); // this is how you get the users id token
+  // const {login, logout, isAuthenticated} = useOidc(); // this gets the functions to login and logout and the logout state
+  // const {accessTokenPayload} = useOidcAccessToken(); // this contains the user info in raw json format
+  // const userInfo = accessTokenPayload as UserInfo;
   const [servers, setServers] = useState<Server[]>([]);
   const [libraries, setLibraries] = useState<Record<string, Library[]>>({});
   const [openServerId, setOpenServerId] = useState<string | null>(null);
@@ -50,13 +55,13 @@ const Home = () => {
   const [query, setQuery] = useState('');
   const [allResults, setAllResults] = useState<GroupedResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-  
+
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortType, setSortType] = useState<SortType>('default');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-    //const {fetch} = useOidcFetch();
+  //const {fetch} = useOidcFetch();
   const apiFetch = useApiFetch();
 
   useEffect(() => {
@@ -70,10 +75,13 @@ const Home = () => {
     const fetchServers = async () => {
       try {
         const response = await apiFetch('/api/servers');
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        setServers(await response.json() as Server[]);
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        setServers((await response.json()) as Server[]);
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "An error occurred fetching servers");
+        setError(
+          e instanceof Error ? e.message : 'An error occurred fetching servers'
+        );
       }
     };
     fetchServers();
@@ -81,7 +89,7 @@ const Home = () => {
 
   const displayedResults = useMemo(() => {
     return [...allResults]
-      .filter(item => {
+      .filter((item) => {
         if (filterType === 'all') return true;
         return item.itemType === filterType;
       })
@@ -101,7 +109,6 @@ const Home = () => {
       });
   }, [allResults, filterType, sortType]);
 
-
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -110,17 +117,26 @@ const Home = () => {
     setAllResults([]);
     setHasSearched(true);
     try {
-      const response = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`);
-      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-      const data = await response.json() as SearchResult[];
+      const response = await apiFetch(
+        `/api/search?q=${encodeURIComponent(query)}`
+      );
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      const data = (await response.json()) as SearchResult[];
       const grouped = new Map<string, GroupedResult>();
       for (const item of data) {
         if (!item.guid) continue;
         if (grouped.has(item.guid)) {
-          grouped.get(item.guid)!.servers.push({ id: item.serverId, name: item.serverName });
+          grouped
+            .get(item.guid)!
+            .servers.push({ id: item.serverId, name: item.serverName });
         } else {
           const { serverId, serverName, itemType, ...rest } = item;
-          grouped.set(item.guid, { ...rest, itemType, servers: [{ id: serverId, name: serverName }] });
+          grouped.set(item.guid, {
+            ...rest,
+            itemType,
+            servers: [{ id: serverId, name: serverName }],
+          });
         }
       }
       const finalResults = Array.from(grouped.values());
@@ -128,7 +144,7 @@ const Home = () => {
       sessionStorage.setItem('lastSearchResults', JSON.stringify(finalResults));
       sessionStorage.setItem('lastSearchQuery', query);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "An unknown error occurred");
+      setError(e instanceof Error ? e.message : 'An unknown error occurred');
     } finally {
       setLoading(false);
     }
@@ -137,14 +153,14 @@ const Home = () => {
   const toggleServerLibraries = (serverId: string) => {
     const newOpenId = openServerId === serverId ? null : serverId;
     setOpenServerId(newOpenId);
-    
+
     if (newOpenId && !libraries[newOpenId]) {
-        const fetchLibraries = async () => {
-            const response = await apiFetch(`/api/servers/${newOpenId}/libraries`);
-            const data = await response.json();
-            setLibraries(prev => ({ ...prev, [newOpenId]: data }));
-        };
-        fetchLibraries();
+      const fetchLibraries = async () => {
+        const response = await apiFetch(`/api/servers/${newOpenId}/libraries`);
+        const data = await response.json();
+        setLibraries((prev) => ({ ...prev, [newOpenId]: data }));
+      };
+      fetchLibraries();
     }
   };
 
@@ -159,7 +175,11 @@ const Home = () => {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search for a movie or show..."
           />
-          <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
+          <button
+            type="submit"
+            className="btn btn-primary btn-lg"
+            disabled={loading}
+          >
             {loading ? 'Searching...' : 'Search'}
           </button>
         </form>
@@ -182,21 +202,35 @@ const Home = () => {
                     className="d-flex align-items-center justify-content-between w-100"
                   >
                     <div className="d-flex align-items-center">
-                      <div className={`status-circle ${server.isOnline ? 'bg-success' : 'bg-danger'}`} />
+                      <div
+                        className={`status-circle ${server.isOnline ? 'bg-success' : 'bg-danger'}`}
+                      />
                       {server.name}
                     </div>
-                    {server.isOnline && <span className={`caret ${openServerId === server.id ? 'open' : ''}`} />}
+                    {server.isOnline && (
+                      <span
+                        className={`caret ${openServerId === server.id ? 'open' : ''}`}
+                      />
+                    )}
                   </ListGroupItem>
                   <Collapse isOpen={openServerId === server.id}>
                     <div className="library-list">
-                      {(libraries[server.id] || []).map(lib => (
-                        <ListGroupItem action tag={Link} to={`/servers/${server.id}/libraries/${lib.key}/${encodeURIComponent(server.name)}/${encodeURIComponent(lib.title)}`} key={lib.key}>
-                            {lib.title}
+                      {(libraries[server.id] || []).map((lib) => (
+                        <ListGroupItem
+                          action
+                          tag={Link}
+                          to={`/servers/${server.id}/libraries/${lib.key}/${encodeURIComponent(server.name)}/${encodeURIComponent(lib.title)}`}
+                          key={lib.key}
+                        >
+                          {lib.title}
                         </ListGroupItem>
                       ))}
-                      {openServerId === server.id && libraries[server.id]?.length === 0 && (
-                          <ListGroupItem className="text-muted small">No libraries found.</ListGroupItem>
-                      )}
+                      {openServerId === server.id &&
+                        libraries[server.id]?.length === 0 && (
+                          <ListGroupItem className="text-muted small">
+                            No libraries found.
+                          </ListGroupItem>
+                        )}
                     </div>
                   </Collapse>
                 </div>
@@ -208,47 +242,79 @@ const Home = () => {
         <div className="col-lg-9">
           {hasSearched && !loading && allResults.length > 0 && (
             <div className="card mb-4">
-                <div className="card-body d-flex align-items-center flex-wrap" style={{gap: '1.5rem'}}>
-                    <div className="form-group mb-0">
-                        <label className="mr-2 mb-0">Filter by:</label>
-                        <div className="btn-group btn-group-sm">
-                            <button className={`btn btn-outline-primary ${filterType === 'all' ? 'active' : ''}`} onClick={() => setFilterType('all')}>All</button>
-                            <button className={`btn btn-outline-primary ${filterType === 'movie' ? 'active' : ''}`} onClick={() => setFilterType('movie')}>Movies</button>
-                            <button className={`btn btn-outline-primary ${filterType === 'show' ? 'active' : ''}`} onClick={() => setFilterType('show')}>Shows</button>
-                        </div>
-                    </div>
-                    <div className="form-group mb-0">
-                        <label htmlFor="sort-select" className="mr-2 mb-0">Sort by:</label>
-                        <select id="sort-select" className="custom-select custom-select-sm" style={{width: 'auto'}} value={sortType} onChange={e => setSortType(e.target.value as SortType)}>
-                            <option value="default">Default</option>
-                            <option value="title-asc">Title (A-Z)</option>
-                            <option value="title-desc">Title (Z-A)</option>
-                            <option value="year-desc">Year (Newest)</option>
-                            <option value="year-asc">Year (Oldest)</option>
-                        </select>
-                    </div>
+              <div
+                className="card-body d-flex align-items-center flex-wrap"
+                style={{ gap: '1.5rem' }}
+              >
+                <div className="form-group mb-0">
+                  <label className="mr-2 mb-0">Filter by:</label>
+                  <div className="btn-group btn-group-sm">
+                    <button
+                      className={`btn btn-outline-primary ${filterType === 'all' ? 'active' : ''}`}
+                      onClick={() => setFilterType('all')}
+                    >
+                      All
+                    </button>
+                    <button
+                      className={`btn btn-outline-primary ${filterType === 'movie' ? 'active' : ''}`}
+                      onClick={() => setFilterType('movie')}
+                    >
+                      Movies
+                    </button>
+                    <button
+                      className={`btn btn-outline-primary ${filterType === 'show' ? 'active' : ''}`}
+                      onClick={() => setFilterType('show')}
+                    >
+                      Shows
+                    </button>
+                  </div>
                 </div>
+                <div className="form-group mb-0">
+                  <label htmlFor="sort-select" className="mr-2 mb-0">
+                    Sort by:
+                  </label>
+                  <select
+                    id="sort-select"
+                    className="custom-select custom-select-sm"
+                    style={{ width: 'auto' }}
+                    value={sortType}
+                    onChange={(e) => setSortType(e.target.value as SortType)}
+                  >
+                    <option value="default">Default</option>
+                    <option value="title-asc">Title (A-Z)</option>
+                    <option value="title-desc">Title (Z-A)</option>
+                    <option value="year-desc">Year (Newest)</option>
+                    <option value="year-asc">Year (Oldest)</option>
+                  </select>
+                </div>
+              </div>
             </div>
           )}
 
           {error && <div className="alert alert-danger">{error}</div>}
 
           <div className="results-grid">
-            {loading ? (
-              Array.from({ length: 12 }).map((_, index) => <ResultCardSkeleton key={index} />)
-            ) : (
-              displayedResults.map((item) => (
-                <Link to={`/media/${encodeURIComponent(item.guid)}`} key={item.guid} className="result-link">
-                  <ResultCard item={item} />
-                </Link>
-              ))
-            )}
+            {loading
+              ? Array.from({ length: 12 }).map((_, index) => (
+                  <ResultCardSkeleton key={index} />
+                ))
+              : displayedResults.map((item) => (
+                  <Link
+                    to={`/media/${encodeURIComponent(item.guid)}`}
+                    key={item.guid}
+                    className="result-link"
+                  >
+                    <ResultCard item={item} />
+                  </Link>
+                ))}
           </div>
 
           {!loading && hasSearched && displayedResults.length === 0 && (
             <div className="text-center mt-5">
               <h4>No results found for "{query}"</h4>
-              <p className="text-muted">Try a different search term or browse the libraries on the left.</p>
+              <p className="text-muted">
+                Try a different search term or browse the libraries on the left.
+              </p>
             </div>
           )}
         </div>
@@ -258,4 +324,3 @@ const Home = () => {
 };
 
 export default Home;
-

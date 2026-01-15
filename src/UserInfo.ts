@@ -11,8 +11,8 @@ interface UserInfo {
   session_state: string;
   acr: string;
   allowed_origins: string[];
-  realm_access: {roles: string[]};
-  resource_access: {[key: string]: {roles: string[]}};
+  realm_access: { roles: string[] };
+  resource_access: { [key: string]: { roles: string[] } };
   scope: string;
   sid: string;
   email_verified: boolean;

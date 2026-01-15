@@ -17,7 +17,17 @@ type TVShowSeasonsProps = {
   showTitle: string;
 };
 
-const SeasonCard = ({ season, serverId, showGuid, showTitle }: { season: SeasonSummary, serverId: string, showGuid: string, showTitle: string }) => {
+const SeasonCard = ({
+  season,
+  serverId,
+  showGuid,
+  showTitle,
+}: {
+  season: SeasonSummary;
+  serverId: string;
+  showGuid: string;
+  showTitle: string;
+}) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const apiFetch = useApiFetch();
 
@@ -26,15 +36,22 @@ const SeasonCard = ({ season, serverId, showGuid, showTitle }: { season: SeasonS
     const fetchImage = async () => {
       if (season.thumbPath) {
         try {
-          const imagePath = season.thumbPath.startsWith('/') ? season.thumbPath.substring(1) : season.thumbPath;
-          const response = await apiFetch(`/api/servers/${serverId}/image/${imagePath}`);
+          const imagePath = season.thumbPath.startsWith('/')
+            ? season.thumbPath.substring(1)
+            : season.thumbPath;
+          const response = await apiFetch(
+            `/api/servers/${serverId}/image/${imagePath}`
+          );
           if (response.ok) {
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
             setImageUrl(objectUrl);
           }
         } catch (error) {
-          console.error(`Failed to fetch image for season ${season.title}`, error);
+          console.error(
+            `Failed to fetch image for season ${season.title}`,
+            error
+          );
         }
       }
     };
@@ -49,8 +66,12 @@ const SeasonCard = ({ season, serverId, showGuid, showTitle }: { season: SeasonS
       to={`/servers/${serverId}/seasons/${season.id}`}
       key={season.id}
       state={{
-        season: { title: season.title, summary: season.summary, thumbPath: season.thumbPath },
-        show: { guid: showGuid, title: showTitle }
+        season: {
+          title: season.title,
+          summary: season.summary,
+          thumbPath: season.thumbPath,
+        },
+        show: { guid: showGuid, title: showTitle },
       }}
       className="season-link"
     >
@@ -58,12 +79,16 @@ const SeasonCard = ({ season, serverId, showGuid, showTitle }: { season: SeasonS
         {imageUrl ? (
           <img src={imageUrl} alt={season.title} className="card-img-top" />
         ) : (
-          <div className="card-img-top skeleton skeleton-poster" style={{ aspectRatio: '2/3' }}></div>
+          <div
+            className="card-img-top skeleton skeleton-poster"
+            style={{ aspectRatio: '2/3' }}
+          ></div>
         )}
         <div className="card-body p-2">
           <h5 className="card-title h6">{season.title}</h5>
           <p className="card-text small text-muted">
-            {season.episodeCount} {season.episodeCount === 1 ? 'episode' : 'episodes'}
+            {season.episodeCount}{' '}
+            {season.episodeCount === 1 ? 'episode' : 'episodes'}
           </p>
         </div>
       </div>
@@ -71,7 +96,12 @@ const SeasonCard = ({ season, serverId, showGuid, showTitle }: { season: SeasonS
   );
 };
 
-const TVShowSeasons = ({ showId, serverId, showGuid, showTitle }: TVShowSeasonsProps) => {
+const TVShowSeasons = ({
+  showId,
+  serverId,
+  showGuid,
+  showTitle,
+}: TVShowSeasonsProps) => {
   const [seasons, setSeasons] = useState<SeasonSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const apiFetch = useApiFetch();
@@ -80,13 +110,15 @@ const TVShowSeasons = ({ showId, serverId, showGuid, showTitle }: TVShowSeasonsP
     const fetchSeasons = async () => {
       setLoading(true);
       try {
-        const response = await apiFetch(`/api/servers/${serverId}/shows/${showId}/seasons`);
+        const response = await apiFetch(
+          `/api/servers/${serverId}/shows/${showId}/seasons`
+        );
         if (response.ok) {
           const data = await response.json();
           setSeasons(data);
         }
       } catch (error) {
-        console.error("Failed to fetch seasons:", error);
+        console.error('Failed to fetch seasons:', error);
       } finally {
         setLoading(false);
       }
@@ -99,7 +131,10 @@ const TVShowSeasons = ({ showId, serverId, showGuid, showTitle }: TVShowSeasonsP
       <div className="seasons-list">
         {Array.from({ length: 4 }).map((_, index) => (
           <div className="card season-card" key={index}>
-            <div className="skeleton skeleton-poster" style={{ aspectRatio: '2/3' }}></div>
+            <div
+              className="skeleton skeleton-poster"
+              style={{ aspectRatio: '2/3' }}
+            ></div>
             <div className="card-body p-2">
               <div className="skeleton skeleton-text"></div>
             </div>
@@ -111,7 +146,7 @@ const TVShowSeasons = ({ showId, serverId, showGuid, showTitle }: TVShowSeasonsP
 
   return (
     <div className="seasons-list">
-      {seasons.map(season => (
+      {seasons.map((season) => (
         <SeasonCard
           key={season.id}
           season={season}

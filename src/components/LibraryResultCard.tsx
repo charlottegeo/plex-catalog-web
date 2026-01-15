@@ -24,16 +24,23 @@ const LibraryResultCard = ({ item }: LibraryResultCardProps) => {
         if (entry.isIntersecting) {
           observer.disconnect();
           try {
-            const response = await apiFetch(`/api/media/${encodeURIComponent(item.guid)}`);
+            const response = await apiFetch(
+              `/api/media/${encodeURIComponent(item.guid)}`
+            );
             if (response.ok) {
-              const data = await response.json() as MediaDetails;
-              const serverInfo = data.availableOn.find(s => s.serverId === item.servers[0].id);
+              const data = (await response.json()) as MediaDetails;
+              const serverInfo = data.availableOn.find(
+                (s) => s.serverId === item.servers[0].id
+              );
               if (serverInfo) {
                 setVersions(serverInfo.versions);
               }
             }
           } catch (error) {
-            console.error("Failed to fetch single-item details for card", error);
+            console.error(
+              'Failed to fetch single-item details for card',
+              error
+            );
           }
         }
       },
@@ -49,8 +56,12 @@ const LibraryResultCard = ({ item }: LibraryResultCardProps) => {
     const fetchImage = async () => {
       if (item.servers[0]?.id && item.thumbPath) {
         try {
-          const imagePath = item.thumbPath.startsWith('/') ? item.thumbPath.substring(1) : item.thumbPath;
-          const response = await apiFetch(`/api/servers/${item.servers[0].id}/image/${imagePath}`);
+          const imagePath = item.thumbPath.startsWith('/')
+            ? item.thumbPath.substring(1)
+            : item.thumbPath;
+          const response = await apiFetch(
+            `/api/servers/${item.servers[0].id}/image/${imagePath}`
+          );
           if (response.ok) {
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
@@ -59,7 +70,7 @@ const LibraryResultCard = ({ item }: LibraryResultCardProps) => {
             setImageUrl(null);
           }
         } catch (error) {
-          console.error("Failed to fetch image for card", error);
+          console.error('Failed to fetch image for card', error);
           setImageUrl(null);
         }
       } else {
@@ -76,14 +87,10 @@ const LibraryResultCard = ({ item }: LibraryResultCardProps) => {
     };
   }, [item.thumbPath, item.servers, apiFetch]);
 
-  const hasSubtitles = versions.some(v => v.subtitles.length > 0);
+  const hasSubtitles = versions.some((v) => v.subtitles.length > 0);
 
   const cardImage = imageUrl ? (
-    <img
-      src={imageUrl}
-      alt={item.title}
-      className="card-img-top card-poster"
-    />
+    <img src={imageUrl} alt={item.title} className="card-img-top card-poster" />
   ) : (
     <div className="card-img-top card-poster d-flex align--items-center justify-content-center bg-light">
       <span className="text-muted">No Image</span>

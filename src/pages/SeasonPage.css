@@ -10,12 +10,50 @@
 
 .episode-thumb {
   width: 100%;
-  height: auto;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 0.25rem;
 }
 
+.episode-thumb-wrapper {
+  width: 100%;
+  padding: 1rem;
+}
+
 .breadcrumb .btn-link {
   vertical-align: baseline;
+}
+
+.episode-card .card-text {
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.episode-card .version-info {
+  font-size: 0.9rem;
+}
+
+.episode-card .badge {
+  font-size: 0.85rem;
+  padding: 0.4em 0.6em;
+  font-weight: 500;
+}
+
+.episode-card .version-info svg {
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: text-bottom;
+}
+
+@media (min-width: 768px) {
+  .episode-card .card-body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .episode-card .card-text {
+    font-size: 1rem;
+  }
+  .episode-card .version-info {
+    font-size: 1rem;
+  }
 }

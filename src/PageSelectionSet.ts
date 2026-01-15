@@ -13,7 +13,7 @@ export type PageRange = {
 };
 
 function parseRange(range: string): PageRange {
-  const dashIndex = range.indexOf("-");
+  const dashIndex = range.indexOf('-');
   let start, end;
   if (dashIndex == -1) {
     start = range;
@@ -48,7 +48,7 @@ export function setContainsPage(set: PageSelectionSet, page: number): boolean {
     return true;
   }
   const ranges = set
-    .split(",")
+    .split(',')
     .map((range) => range.trim())
     .map((range) => parseRange(range));
   return ranges.some((range) => page >= range.start && page <= range.end);
@@ -56,12 +56,12 @@ export function setContainsPage(set: PageSelectionSet, page: number): boolean {
 
 export function addPageToSet(
   set: PageSelectionSet,
-  page: number,
+  page: number
 ): PageSelectionSet {
   if (setContainsPage(set, page)) {
     return set;
   }
-  const rangeStrings = set.split(",");
+  const rangeStrings = set.split(',');
   const ranges = rangeStrings
     .map((range) => range.trim())
     .map((range) => parseRange(range));
@@ -80,7 +80,7 @@ export function addPageToSet(
   }
   if (located !== null) {
     rangeStrings[located] = serializeRange(ranges[located]);
-    return rangeStrings.join(",");
+    return rangeStrings.join(',');
   }
 
   if (set.trim().length) {
@@ -93,7 +93,7 @@ export function addPageToSet(
 export function removePageFromSet(
   set: PageSelectionSet,
   page: number,
-  pageCount: number,
+  pageCount: number
 ): PageSelectionSet {
   if (!setContainsPage(set, page)) {
     return set;
@@ -101,31 +101,31 @@ export function removePageFromSet(
   if (!set.length) {
     set = `1-${pageCount}`;
   }
-  const rangeStrings = set.split(",");
+  const rangeStrings = set.split(',');
   return rangeStrings
     .filter((rangeString) => rangeString.trim().length)
     .map((rangeString) => ({
       range: parseRange(rangeString.trim()),
       string: rangeString,
     }))
-    .flatMap(({range, string}: {range: PageRange; string: string}) => {
+    .flatMap(({ range, string }: { range: PageRange; string: string }) => {
       if (range.start == page && range.end == page) {
         return [];
       }
       if (range.start == page) {
-        return serializeRange({start: page + 1, end: range.end});
+        return serializeRange({ start: page + 1, end: range.end });
       }
       if (range.end == page) {
-        return serializeRange({start: range.start, end: page - 1});
+        return serializeRange({ start: range.start, end: page - 1 });
       }
       if (page >= range.start && page <= range.end) {
         // Contains this page
         return [
-          serializeRange({start: range.start, end: page - 1}),
-          serializeRange({start: page + 1, end: range.end}),
+          serializeRange({ start: range.start, end: page - 1 }),
+          serializeRange({ start: page + 1, end: range.end }),
         ];
       }
       return [string];
     })
-    .join(",");
+    .join(',');
 }

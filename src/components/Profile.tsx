@@ -3,21 +3,21 @@ import {
   DropdownMenu,
   DropdownToggle,
   UncontrolledDropdown,
-} from "reactstrap";
+} from 'reactstrap';
 
-import React from "react";
-import UserInfo from "../UserInfo";
-import {SSOEnabled} from "../configuration";
+import React from 'react';
+import UserInfo from '../UserInfo';
+import { SSOEnabled } from '../configuration';
 import {
   getUseOidcAccessToken,
   getUseOidcHook,
   NoSSOProfilePicture,
   NoSSOUserInfo,
-} from "../SSODisabledDefaults";
+} from '../SSODisabledDefaults';
 
 const Profile: React.FunctionComponent = () => {
-  const {logout} = getUseOidcHook()();
-  const {accessTokenPayload} = getUseOidcAccessToken()();
+  const { logout } = getUseOidcHook()();
+  const { accessTokenPayload } = getUseOidcAccessToken()();
   const userInfo = SSOEnabled
     ? (accessTokenPayload as UserInfo)
     : NoSSOUserInfo;

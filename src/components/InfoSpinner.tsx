@@ -1,7 +1,7 @@
-import "./InfoSpinner.tsx.scss";
+import './InfoSpinner.tsx.scss';
 
-import React from "react";
-import {Spinner} from "reactstrap";
+import React from 'react';
+import { Spinner } from 'reactstrap';
 
 interface InfoSpinnerProps {
   isCentered?: boolean;
@@ -13,11 +13,11 @@ const InfoSpinner: React.FC<InfoSpinnerProps> = ({
   isCentered = false,
 }) => {
   return (
-    <div className={`spinner-container ${isCentered ? "centered" : ""}`}>
-      <Spinner size={"sm"} color="primary">
+    <div className={`spinner-container ${isCentered ? 'centered' : ''}`}>
+      <Spinner size={'sm'} color="primary">
         Loading...
       </Spinner>
-      <span className="spinner-text">{children ?? ""}</span>
+      <span className="spinner-text">{children ?? ''}</span>
     </div>
   );
 };

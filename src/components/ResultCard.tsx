@@ -20,16 +20,20 @@ const ResultCard = ({ item, displayMode = 'search' }: ResultCardProps) => {
     if (isSingleServer && item.itemType === 'movie') {
       const fetchDetails = async () => {
         try {
-          const response = await apiFetch(`/api/media/${encodeURIComponent(item.guid)}`);
+          const response = await apiFetch(
+            `/api/media/${encodeURIComponent(item.guid)}`
+          );
           if (response.ok) {
-            const data = await response.json() as MediaDetails;
-            const serverInfo = data.availableOn.find(s => s.serverId === item.servers[0].id);
+            const data = (await response.json()) as MediaDetails;
+            const serverInfo = data.availableOn.find(
+              (s) => s.serverId === item.servers[0].id
+            );
             if (serverInfo) {
               setVersions(serverInfo.versions);
             }
           }
         } catch (error) {
-          console.error("Failed to fetch single-item details", error);
+          console.error('Failed to fetch single-item details', error);
         }
       };
       fetchDetails();
@@ -44,9 +48,13 @@ const ResultCard = ({ item, displayMode = 'search' }: ResultCardProps) => {
     const fetchImage = async () => {
       if (item.servers[0]?.id && item.thumbPath) {
         try {
-          const imagePath = item.thumbPath.startsWith('/') ? item.thumbPath.substring(1) : item.thumbPath;
-          const response = await apiFetch(`/api/servers/${item.servers[0].id}/image/${imagePath}`);
-          
+          const imagePath = item.thumbPath.startsWith('/')
+            ? item.thumbPath.substring(1)
+            : item.thumbPath;
+          const response = await apiFetch(
+            `/api/servers/${item.servers[0].id}/image/${imagePath}`
+          );
+
           if (response.ok) {
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
@@ -55,7 +63,7 @@ const ResultCard = ({ item, displayMode = 'search' }: ResultCardProps) => {
             setImageUrl(null);
           }
         } catch (error) {
-          console.error("Failed to fetch image", error);
+          console.error('Failed to fetch image', error);
           setImageUrl(null);
         }
       } else {
@@ -72,7 +80,7 @@ const ResultCard = ({ item, displayMode = 'search' }: ResultCardProps) => {
     };
   }, [item.thumbPath, item.servers, apiFetch]);
 
-  const hasSubtitles = versions.some(v => v.subtitles.length > 0);
+  const hasSubtitles = versions.some((v) => v.subtitles.length > 0);
 
   return (
     <div className="card result-card h-100">
@@ -106,28 +114,31 @@ const ResultCard = ({ item, displayMode = 'search' }: ResultCardProps) => {
                 </div>
               )}
             </div>
+          ) : isSingleServer ? (
+            <div className="single-server-info">
+              <span className="badge badge-light text-dark">
+                {item.servers[0].name}
+              </span>
+              {item.itemType === 'movie' && (
+                <div className="version-info mt-1">
+                  {versions.map((v, i) => (
+                    <span key={i} className="badge badge-soft-secondary mr-1">
+                      {formatResolution(v.videoResolution)}
+                    </span>
+                  ))}
+                  {hasSubtitles && <SubtitlesIcon />}
+                </div>
+              )}
+            </div>
           ) : (
-            isSingleServer ? (
-              <div className="single-server-info">
-                <span className="badge badge-light text-dark">{item.servers[0].name}</span>
-                {item.itemType === 'movie' && (
-                  <div className="version-info mt-1">
-                    {versions.map((v, i) => (
-                      <span key={i} className="badge badge-soft-secondary mr-1">
-                        {formatResolution(v.videoResolution)}
-                      </span>
-                    ))}
-                    {hasSubtitles && <SubtitlesIcon />}
-                  </div>
-                )}
-              </div>
-            ) : (
-              item.servers.map((server) => (
-                <span key={server.id} className="badge badge-light text-dark mr-1 mb-1">
-                  {server.name}
-                </span>
-              ))
-            )
+            item.servers.map((server) => (
+              <span
+                key={server.id}
+                className="badge badge-light text-dark mr-1 mb-1"
+              >
+                {server.name}
+              </span>
+            ))
           )}
         </div>
       </div>
