@@ -15,8 +15,6 @@ RUN pnpm run build
 
 FROM docker.io/nginxinc/nginx-unprivileged:alpine
 
-ENV BACKEND_URL=http://kprint-backend:8000
-
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=node /app/dist /usr/share/nginx/html
 
