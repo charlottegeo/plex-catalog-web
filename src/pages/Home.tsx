@@ -1,68 +1,86 @@
-//import {useOidcFetch, useOidc, useOidcAccessToken, useOidcIdToken} from "@axa-fr/react-oidc";
-//import {apiPrefix} from "../configuration";
-//import Authenticating from "../callbacks/Authenticating";
-//import AuthenticationError from "../callbacks/AuthenticationError";
-//import SessionLost from "../callbacks/SessionLost";
-//import UserInfo from "../UserInfo";
-
-import { useState, useEffect, FormEvent, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useApiFetch } from '../utils/api';
 import { Link } from 'react-router-dom';
-import { ListGroup, ListGroupItem, Collapse } from 'reactstrap';
+import { Alert, FormGroup, Label, Collapse } from 'reactstrap';
 import ResultCard from '../components/ResultCard';
-import { GroupedResult } from '../types';
+import { GroupedResult, SystemInfo } from '../types';
 import ResultCardSkeleton from '../components/ResultCardSkeleton';
+import { SortAscIcon, SortDescIcon, FilmReelIcon } from '../components/icons';
 import './Home.css';
 
 type SearchResult = {
   guid: string;
   title: string;
   year?: number;
+  originallyAvailableAt?: string;
   thumbPath?: string;
   serverId: string;
   serverName: string;
   itemType: 'movie' | 'show';
 };
 
-type Server = {
-  id: string;
-  name: string;
-  isOnline: boolean;
-};
-
-type Library = {
-  key: string;
-  title: string;
-};
-
 type FilterType = 'all' | 'movie' | 'show';
-type SortType =
-  | 'default'
-  | 'title-asc'
-  | 'title-desc'
-  | 'year-desc'
-  | 'year-asc';
+
+type SortField = 'title' | 'year' | 'date' | 'duration';
+type SortDirection = 'asc' | 'desc';
 
 const Home = () => {
-  // const {idToken, idTokenPayload} = useOidcIdToken(); // this is how you get the users id token
-  // const {login, logout, isAuthenticated} = useOidc(); // this gets the functions to login and logout and the logout state
-  // const {accessTokenPayload} = useOidcAccessToken(); // this contains the user info in raw json format
-  // const userInfo = accessTokenPayload as UserInfo;
-  const [servers, setServers] = useState<Server[]>([]);
-  const [libraries, setLibraries] = useState<Record<string, Library[]>>({});
-  const [openServerId, setOpenServerId] = useState<string | null>(null);
-
   const [query, setQuery] = useState('');
   const [allResults, setAllResults] = useState<GroupedResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-
   const [filterType, setFilterType] = useState<FilterType>('all');
-  const [sortType, setSortType] = useState<SortType>('default');
-
+  const [contentRatingFilter, setContentRatingFilter] = useState<string>('all');
+  const [sortField, setSortField] = useState<SortField>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  //const {fetch} = useOidcFetch();
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const apiFetch = useApiFetch();
+
+  const roundedTotal = systemInfo
+    ? Math.floor((systemInfo.totalMovies + systemInfo.totalShows) / 100) * 100
+    : 0;
+
+  useEffect(() => {
+    const fetchSystemInfo = async () => {
+      try {
+        const response = await apiFetch('/api/system/info');
+        if (response.ok) {
+          const data = (await response.json()) as SystemInfo;
+          setSystemInfo(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch system info:', e);
+      }
+    };
+    fetchSystemInfo();
+  }, [apiFetch]);
+
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const el = document.activeElement;
+      const isInput =
+        el?.tagName === 'INPUT' ||
+        el?.tagName === 'TEXTAREA' ||
+        (el as HTMLElement)?.getAttribute?.('contenteditable') === 'true';
+      if (isInput) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key.length === 1 && !e.repeat) {
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   useEffect(() => {
     const savedResults = sessionStorage.getItem('lastSearchResults');
@@ -72,250 +90,357 @@ const Home = () => {
       setQuery(savedQuery);
       setHasSearched(true);
     }
-    const fetchServers = async () => {
-      try {
-        const response = await apiFetch('/api/servers');
-        if (!response.ok)
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        setServers((await response.json()) as Server[]);
-      } catch (e: unknown) {
-        setError(
-          e instanceof Error ? e.message : 'An error occurred fetching servers'
-        );
-      }
-    };
-    fetchServers();
-  }, [apiFetch]);
+  }, []);
 
   const displayedResults = useMemo(() => {
     return [...allResults]
       .filter((item) => {
-        if (filterType === 'all') return true;
-        return item.itemType === filterType;
+        if (filterType !== 'all' && item.itemType !== filterType) {
+          return false;
+        }
+        if (
+          contentRatingFilter !== 'all' &&
+          item.contentRating !== contentRatingFilter
+        ) {
+          return false;
+        }
+        return true;
       })
       .sort((a, b) => {
-        switch (sortType) {
-          case 'title-asc':
-            return a.title.localeCompare(b.title);
-          case 'title-desc':
-            return b.title.localeCompare(a.title);
-          case 'year-desc':
-            return (b.year ?? 0) - (a.year ?? 0);
-          case 'year-asc':
-            return (a.year ?? 0) - (b.year ?? 0);
-          default:
-            return 0;
+        let result = 0;
+        switch (sortField) {
+          case 'title':
+            result = a.title.localeCompare(b.title);
+            break;
+          case 'year':
+            result = (a.year ?? 0) - (b.year ?? 0);
+            break;
+          case 'date': {
+            const aDate = a.originallyAvailableAt || `${a.year}-01-01`;
+            const bDate = b.originallyAvailableAt || `${b.year}-01-01`;
+            result = aDate.localeCompare(bDate);
+            break;
+          }
+          case 'duration':
+            result = (a.duration ?? 0) - (b.duration ?? 0);
+            break;
         }
+
+        return sortDirection === 'asc' ? result : -result;
       });
-  }, [allResults, filterType, sortType]);
+  }, [allResults, filterType, contentRatingFilter, sortField, sortDirection]);
 
-  const handleSearch = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    setLoading(true);
-    setError(null);
-    setAllResults([]);
-    setHasSearched(true);
-    try {
-      const response = await apiFetch(
-        `/api/search?q=${encodeURIComponent(query)}`
-      );
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      const data = (await response.json()) as SearchResult[];
-      const grouped = new Map<string, GroupedResult>();
-      for (const item of data) {
-        if (!item.guid) continue;
-        if (grouped.has(item.guid)) {
-          grouped
-            .get(item.guid)!
-            .servers.push({ id: item.serverId, name: item.serverName });
-        } else {
-          const { serverId, serverName, itemType, ...rest } = item;
-          grouped.set(item.guid, {
-            ...rest,
-            itemType,
-            servers: [{ id: serverId, name: serverName }],
-          });
+  const totalPages = Math.ceil(displayedResults.length / itemsPerPage);
+  const paginatedResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return displayedResults.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, displayedResults]);
+
+  const availableContentRatings = useMemo(() => {
+    return [
+      ...new Set(
+        allResults
+          .map((item) => item.contentRating)
+          .filter((rating): rating is string => !!rating)
+      ),
+    ].sort();
+  }, [allResults]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, contentRatingFilter, sortField, sortDirection, query]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [query]);
+
+  useEffect(() => {
+    const search = async () => {
+      if (!debouncedQuery.trim()) {
+        if (hasSearched) {
+          setAllResults([]);
+          sessionStorage.removeItem('lastSearchResults');
+          sessionStorage.removeItem('lastSearchQuery');
+          setHasSearched(false);
         }
+        return;
       }
-      const finalResults = Array.from(grouped.values());
-      setAllResults(finalResults);
-      sessionStorage.setItem('lastSearchResults', JSON.stringify(finalResults));
-      sessionStorage.setItem('lastSearchQuery', query);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'An unknown error occurred');
-    } finally {
-      setLoading(false);
+      setLoading(true);
+      setError(null);
+      setHasSearched(true);
+      try {
+        const response = await apiFetch(
+          `/api/search?q=${encodeURIComponent(debouncedQuery)}`
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = (await response.json()) as SearchResult[];
+        const grouped = new Map<string, GroupedResult>();
+        for (const item of data) {
+          if (!item.guid) continue;
+          if (grouped.has(item.guid)) {
+            const existing = grouped.get(item.guid)!;
+            const serverExists = existing.servers.some(
+              (s) => s.id === item.serverId
+            );
+            if (!serverExists) {
+              existing.servers.push({
+                id: item.serverId,
+                name: item.serverName,
+              });
+            }
+          } else {
+            const { serverId, serverName, itemType, ...rest } = item;
+            grouped.set(item.guid, {
+              ...rest,
+              itemType,
+              servers: [{ id: serverId, name: serverName }],
+            });
+          }
+        }
+        const finalResults = Array.from(grouped.values());
+        setAllResults(finalResults);
+        sessionStorage.setItem(
+          'lastSearchResults',
+          JSON.stringify(finalResults)
+        );
+        sessionStorage.setItem('lastSearchQuery', debouncedQuery);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'An unknown error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    search();
+  }, [debouncedQuery, apiFetch, hasSearched]);
+
+  const handlePageClick = (e: React.MouseEvent, page: number) => {
+    e.preventDefault();
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      window.scrollTo(0, 0);
     }
   };
 
-  const toggleServerLibraries = (serverId: string) => {
-    const newOpenId = openServerId === serverId ? null : serverId;
-    setOpenServerId(newOpenId);
-
-    if (newOpenId && !libraries[newOpenId]) {
-      const fetchLibraries = async () => {
-        const response = await apiFetch(`/api/servers/${newOpenId}/libraries`);
-        const data = await response.json();
-        setLibraries((prev) => ({ ...prev, [newOpenId]: data }));
-      };
-      fetchLibraries();
-    }
-  };
+  const FilterControls = () => (
+    <div className="filter-controls-container p-3">
+      <FormGroup>
+        <Label className="small font-weight-bold text-uppercase text-muted">
+          Filter Type
+        </Label>
+        <div className="btn-group btn-group-toggle d-flex w-100">
+          {['all', 'movie', 'show'].map((t) => (
+            <label
+              key={t}
+              className={`btn btn-primary flex-grow-1 ${filterType === t ? 'active' : ''}`}
+            >
+              <input
+                type="radio"
+                name="filter-type"
+                id={`filter-${t}`}
+                checked={filterType === t}
+                onChange={() => setFilterType(t as FilterType)}
+                autoComplete="off"
+              />
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </label>
+          ))}
+        </div>
+      </FormGroup>
+      {availableContentRatings.length > 0 && (
+        <FormGroup>
+          <Label className="small font-weight-bold text-uppercase text-muted">
+            Content Rating
+          </Label>
+          <select
+            className="form-control"
+            value={contentRatingFilter}
+            onChange={(e) => setContentRatingFilter(e.target.value)}
+          >
+            <option value="all">All Ratings</option>
+            {availableContentRatings.map((rating) => (
+              <option key={rating} value={rating}>
+                {rating}
+              </option>
+            ))}
+          </select>
+        </FormGroup>
+      )}
+      <FormGroup className="mb-0">
+        <Label className="small font-weight-bold text-uppercase text-muted">
+          Sort By
+        </Label>
+        <div className="d-flex align-items-center">
+          <select
+            className="form-control flex-grow-1"
+            value={sortField}
+            onChange={(e) => setSortField(e.target.value as SortField)}
+          >
+            <option value="title">Title</option>
+            <option value="year">Year</option>
+            <option value="date">Release Date</option>
+            <option value="duration">Duration</option>
+          </select>
+          <button
+            className="btn btn-secondary ml-2 d-flex align-items-center justify-content-center"
+            type="button"
+            onClick={() =>
+              setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+            }
+            style={{ minWidth: '40px', height: '38px' }}
+            title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+          >
+            {sortDirection === 'asc' ? (
+              <SortAscIcon style={{ fontSize: '1.2rem' }} />
+            ) : (
+              <SortDescIcon style={{ fontSize: '1.2rem' }} />
+            )}
+          </button>
+        </div>
+      </FormGroup>
+    </div>
+  );
 
   return (
-    <div className="container">
-      <div className="jumbotron">
-        <form onSubmit={handleSearch} className="form-inline">
-          <input
-            type="text"
-            className="form-control form-control-lg mr-sm-2 flex-grow-1"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for a movie or show..."
-          />
-          <button
-            type="submit"
-            className="btn btn-primary btn-lg"
-            disabled={loading}
-          >
-            {loading ? 'Searching...' : 'Search'}
-          </button>
-        </form>
-      </div>
+    <div className="container mt-4">
+      {error && (
+        <Alert color="danger" toggle={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       <div className="row">
-        <div className="col-lg-3">
-          <div className="card mb-4">
-            <div className="card-header">
-              <h5 className="mb-0">Browse Servers</h5>
+        <div className="col-12 col-lg-3 mb-4">
+          <div className="search-header mb-3">
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="form-control form-control-lg border-0"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for a movie or show..."
+            />
+          </div>
+          <div
+            className="card shadow-sm border-0 sticky-top"
+            style={{ top: '20px' }}
+          >
+            <div
+              className="card-header bg-white d-flex justify-content-between align-items-center"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <h5 className="mb-0">Filters</h5>
+              <span className={`caret ${filtersOpen ? 'open' : ''}`} />
             </div>
-            <ListGroup flush>
-              {servers.map((server) => (
-                <div key={server.id}>
-                  <ListGroupItem
-                    action
-                    tag="button"
-                    onClick={() => toggleServerLibraries(server.id)}
-                    disabled={!server.isOnline}
-                    className="d-flex align-items-center justify-content-between w-100"
-                  >
-                    <div className="d-flex align-items-center">
-                      <div
-                        className={`status-circle ${server.isOnline ? 'bg-success' : 'bg-danger'}`}
-                      />
-                      {server.name}
-                    </div>
-                    {server.isOnline && (
-                      <span
-                        className={`caret ${openServerId === server.id ? 'open' : ''}`}
-                      />
-                    )}
-                  </ListGroupItem>
-                  <Collapse isOpen={openServerId === server.id}>
-                    <div className="library-list">
-                      {(libraries[server.id] || []).map((lib) => (
-                        <ListGroupItem
-                          action
-                          tag={Link}
-                          to={`/servers/${server.id}/libraries/${lib.key}/${encodeURIComponent(server.name)}/${encodeURIComponent(lib.title)}`}
-                          key={lib.key}
-                        >
-                          {lib.title}
-                        </ListGroupItem>
-                      ))}
-                      {openServerId === server.id &&
-                        libraries[server.id]?.length === 0 && (
-                          <ListGroupItem className="text-muted small">
-                            No libraries found.
-                          </ListGroupItem>
-                        )}
-                    </div>
-                  </Collapse>
-                </div>
-              ))}
-            </ListGroup>
+            <Collapse isOpen={filtersOpen}>
+              <FilterControls />
+            </Collapse>
           </div>
         </div>
 
-        <div className="col-lg-9">
-          {hasSearched && !loading && allResults.length > 0 && (
-            <div className="card mb-4">
-              <div
-                className="card-body d-flex align-items-center flex-wrap"
-                style={{ gap: '1.5rem' }}
-              >
-                <div className="form-group mb-0">
-                  <label className="mr-2 mb-0">Filter by:</label>
-                  <div className="btn-group btn-group-sm">
-                    <button
-                      className={`btn btn-outline-primary ${filterType === 'all' ? 'active' : ''}`}
-                      onClick={() => setFilterType('all')}
-                    >
-                      All
-                    </button>
-                    <button
-                      className={`btn btn-outline-primary ${filterType === 'movie' ? 'active' : ''}`}
-                      onClick={() => setFilterType('movie')}
-                    >
-                      Movies
-                    </button>
-                    <button
-                      className={`btn btn-outline-primary ${filterType === 'show' ? 'active' : ''}`}
-                      onClick={() => setFilterType('show')}
-                    >
-                      Shows
-                    </button>
-                  </div>
-                </div>
-                <div className="form-group mb-0">
-                  <label htmlFor="sort-select" className="mr-2 mb-0">
-                    Sort by:
-                  </label>
-                  <select
-                    id="sort-select"
-                    className="custom-select custom-select-sm"
-                    style={{ width: 'auto' }}
-                    value={sortType}
-                    onChange={(e) => setSortType(e.target.value as SortType)}
-                  >
-                    <option value="default">Default</option>
-                    <option value="title-asc">Title (A-Z)</option>
-                    <option value="title-desc">Title (Z-A)</option>
-                    <option value="year-desc">Year (Newest)</option>
-                    <option value="year-asc">Year (Oldest)</option>
-                  </select>
-                </div>
+        <div className="col-12 col-lg-9">
+          {hasSearched && !loading && displayedResults.length > 0 && (
+            <div className="results-count-header">
+              <p className="text-muted mb-3 mb-lg-0">
+                {displayedResults.length}{' '}
+                {displayedResults.length === 1 ? 'result' : 'results'}
+              </p>
+            </div>
+          )}
+          {!hasSearched && (
+            <div className="empty-state-section">
+              <FilmReelIcon className="empty-state-ghost-icon" />
+              <div className="empty-state-content">
+                <h2 className="empty-state-headline">
+                  {systemInfo && roundedTotal > 0
+                    ? `Search ${roundedTotal}+ Titles`
+                    : 'Search Titles'}
+                </h2>
+                <p className="empty-state-subtext small text-uppercase text-muted">
+                  {systemInfo
+                    ? `Checking availability across ${systemInfo.serverCount} servers`
+                    : 'Checking availability across your servers'}
+                </p>
+              </div>
+            </div>
+          )}
+          {hasSearched && !loading && displayedResults.length === 0 && (
+            <div className="empty-state-section title-not-found-section">
+              <FilmReelIcon className="empty-state-ghost-icon" />
+              <div className="empty-state-content">
+                <h2 className="empty-state-headline">Title Not Found</h2>
+                <p className="empty-state-subtext small text-uppercase text-muted">
+                  We couldn't find any results for &quot;{debouncedQuery}&quot;.
+                </p>
               </div>
             </div>
           )}
 
-          {error && <div className="alert alert-danger">{error}</div>}
-
           <div className="results-grid">
             {loading
-              ? Array.from({ length: 12 }).map((_, index) => (
-                  <ResultCardSkeleton key={index} />
+              ? Array.from({ length: 12 }).map((_, i) => (
+                  <ResultCardSkeleton key={i} />
                 ))
-              : displayedResults.map((item) => (
+              : paginatedResults.map((item) => (
                   <Link
-                    to={`/media/${encodeURIComponent(item.guid)}`}
+                    to={`/media/${item.guid.replace('plex://', '')}`}
                     key={item.guid}
                     className="result-link"
                   >
-                    <ResultCard item={item} />
+                    <ResultCard
+                      item={item}
+                      hideTypeTag={filterType !== 'all'}
+                    />
                   </Link>
                 ))}
           </div>
 
-          {!loading && hasSearched && displayedResults.length === 0 && (
-            <div className="text-center mt-5">
-              <h4>No results found for "{query}"</h4>
-              <p className="text-muted">
-                Try a different search term or browse the libraries on the left.
-              </p>
-            </div>
+          {!loading && totalPages > 1 && (
+            <nav className="d-flex justify-content-center mt-5 mb-5">
+              <ul className="pagination shadow-sm">
+                <li
+                  className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}
+                >
+                  <a
+                    className="page-link"
+                    href="#"
+                    onClick={(e) => handlePageClick(e, currentPage - 1)}
+                  >
+                    &laquo;
+                  </a>
+                </li>
+                {[...Array(totalPages)].map((_, i) => (
+                  <li
+                    key={i}
+                    className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
+                  >
+                    <a
+                      className="page-link"
+                      href="#"
+                      onClick={(e) => handlePageClick(e, i + 1)}
+                    >
+                      {i + 1}
+                    </a>
+                  </li>
+                ))}
+                <li
+                  className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
+                >
+                  <a
+                    className="page-link"
+                    href="#"
+                    onClick={(e) => handlePageClick(e, currentPage + 1)}
+                  >
+                    &raquo;
+                  </a>
+                </li>
+              </ul>
+            </nav>
           )}
         </div>
       </div>

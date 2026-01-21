@@ -3,6 +3,9 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .logo {
@@ -39,4 +42,37 @@
 
 .read-the-docs {
   color: #888;
+}
+
+.btn,
+.page-link,
+.list-group-item {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 10px;
+}
+
+@media (max-width: 576px) {
+  .breadcrumb {
+    font-size: 0.8rem;
+    padding: 0.5rem 0;
+    background: transparent;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+.card-poster {
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
 }

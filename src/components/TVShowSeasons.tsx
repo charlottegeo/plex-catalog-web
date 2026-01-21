@@ -1,6 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+  useCallback,
+} from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useApiFetch } from '../utils/api';
+import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 
 type SeasonSummary = {
   id: string;
@@ -105,6 +112,26 @@ const TVShowSeasons = ({
   const [seasons, setSeasons] = useState<SeasonSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const apiFetch = useApiFetch();
+  const navigate = useNavigate();
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkForScrollPosition = useCallback(() => {
+    const { current } = listRef;
+    if (current) {
+      const { scrollLeft, scrollWidth, clientWidth } = current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft !== scrollWidth - clientWidth);
+    }
+  }, []);
+
+  const scrollContainer = (amount: number) => {
+    if (listRef.current) {
+      listRef.current.scrollLeft += amount;
+    }
+  };
 
   useEffect(() => {
     const fetchSeasons = async () => {
@@ -114,7 +141,21 @@ const TVShowSeasons = ({
           `/api/servers/${serverId}/shows/${showId}/seasons`
         );
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as SeasonSummary[];
+          if (data.length === 1 && data[0].title === showTitle) {
+            navigate(`/servers/${serverId}/seasons/${data[0].id}`, {
+              replace: true,
+              state: {
+                season: {
+                  title: data[0].title,
+                  summary: data[0].summary,
+                  thumbPath: data[0].thumbPath,
+                },
+                show: { guid: showGuid, title: showTitle },
+              },
+            });
+            return;
+          }
           setSeasons(data);
         }
       } catch (error) {
@@ -124,7 +165,23 @@ const TVShowSeasons = ({
       }
     };
     fetchSeasons();
-  }, [showId, serverId, apiFetch]);
+  }, [showId, serverId, apiFetch, navigate, showTitle, showGuid]);
+
+  useLayoutEffect(() => {
+    const { current } = listRef;
+    if (current) {
+      checkForScrollPosition();
+      current.addEventListener('scroll', checkForScrollPosition);
+      window.addEventListener('resize', checkForScrollPosition);
+    }
+
+    return () => {
+      if (current) {
+        current.removeEventListener('scroll', checkForScrollPosition);
+        window.removeEventListener('resize', checkForScrollPosition);
+      }
+    };
+  }, [seasons, checkForScrollPosition]);
 
   if (loading) {
     return (
@@ -144,17 +201,37 @@ const TVShowSeasons = ({
     );
   }
 
+  if (seasons.length === 0) return null;
+
   return (
-    <div className="seasons-list">
-      {seasons.map((season) => (
-        <SeasonCard
-          key={season.id}
-          season={season}
-          serverId={serverId}
-          showGuid={showGuid}
-          showTitle={showTitle}
-        />
-      ))}
+    <div className="seasons-list-wrapper">
+      {canScrollLeft && (
+        <button
+          className="scroll-button left"
+          onClick={() => scrollContainer(-300)}
+        >
+          <ChevronLeftIcon />
+        </button>
+      )}
+      <div className="seasons-list" ref={listRef}>
+        {seasons.map((season) => (
+          <SeasonCard
+            key={season.id}
+            season={season}
+            serverId={serverId}
+            showGuid={showGuid}
+            showTitle={showTitle}
+          />
+        ))}
+      </div>
+      {canScrollRight && (
+        <button
+          className="scroll-button right"
+          onClick={() => scrollContainer(300)}
+        >
+          <ChevronRightIcon />
+        </button>
+      )}
     </div>
   );
 };

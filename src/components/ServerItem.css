@@ -1,0 +1,55 @@
+.server-header {
+  transition: background-color 0.2s ease;
+}
+
+.server-header.server-online:hover {
+  background-color: #f8f9fa;
+}
+
+.server-header.server-offline {
+  opacity: 0.7;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-indicator.status-online {
+  background-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.status-indicator.status-offline {
+  background-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+}
+
+.caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  border-top: 5px solid #6c757d;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+  transition: transform 0.2s ease;
+}
+
+.caret.open {
+  transform: rotate(180deg);
+}
+
+.list-group-item.library-item-link {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.list-group-item.library-item-link:hover {
+  background-color: #f8f9fa !important;
+  padding-left: calc(1.25rem - 1px);
+}

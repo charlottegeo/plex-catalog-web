@@ -1,0 +1,18 @@
+.servers-online-section,
+.servers-offline-section {
+  padding: 1.5rem;
+  height: 100%;
+}
+
+.servers-online-section h2,
+.servers-offline-section h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .servers-online-section,
+  .servers-offline-section {
+    padding: 1rem;
+  }
+}

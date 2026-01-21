@@ -1,18 +1,17 @@
 .episode-list .episode-card {
-  background-color: transparent;
+  background-color: white;
   border: none;
-  border-bottom: 1px solid var(--gray-300, #dee2e6);
-}
-
-.episode-list .episode-card:last-child {
-  border-bottom: none;
+  margin-bottom: 1.5rem;
+  border-radius: 12px !important;
+  transition: transform 0.2s;
 }
 
 .episode-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 0.25rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .episode-thumb-wrapper {
@@ -20,40 +19,62 @@
   padding: 1rem;
 }
 
-.breadcrumb .btn-link {
-  vertical-align: baseline;
+@media (min-width: 768px) {
+  .episode-thumb-wrapper {
+    padding: 1.25rem;
+  }
+}
+
+.episode-card .clamped-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .episode-card .card-text {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   margin-bottom: 0.75rem;
 }
 
-.episode-card .version-info {
-  font-size: 0.9rem;
+.episode-card .badge-soft-secondary {
+  background-color: #f8f9fa;
+  color: #495057;
+  border: 1px solid #dee2e6;
+  font-weight: 600;
 }
 
-.episode-card .badge {
-  font-size: 0.85rem;
-  padding: 0.4em 0.6em;
-  font-weight: 500;
+.version-info svg {
+  flex-shrink: 0;
 }
 
-.episode-card .version-info svg {
-  width: 1.2em;
-  height: 1.2em;
-  vertical-align: text-bottom;
+@media (max-width: 768px) {
+  .episode-thumb-wrapper {
+    padding: 0.75rem;
+    margin-right: 0;
+  }
 }
 
-@media (min-width: 768px) {
-  .episode-card .card-body {
-    padding-left: 0;
-    padding-right: 0;
-  }
-  .episode-card .card-text {
-    font-size: 1rem;
-  }
-  .episode-card .version-info {
-    font-size: 1rem;
-  }
+.summary-text {
+  transition: max-height 0.4s ease-in-out;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.summary-text.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  max-height: 4.5em;
+}
+
+.breadcrumb-container {
+  padding: 10px 0;
+}
+
+.breadcrumb-container .breadcrumb {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }

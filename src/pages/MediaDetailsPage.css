@@ -5,20 +5,48 @@
   padding-bottom: 1rem;
 }
 
-.season-link, .season-link:hover {
+.season-link,
+.season-link:hover {
   color: inherit;
   text-decoration: none;
 }
 
+.source-indicator {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+}
+
+.source-seasons-container {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 16px;
+  border: 1px solid #eee;
+}
+
+.seasons-list {
+  display: flex;
+  overflow-x: auto;
+  gap: 1.25rem;
+  padding: 0.5rem;
+  scrollbar-width: thin;
+}
+
 .season-card {
-  width: 150px;
-  flex-shrink: 0;
-  font-size: 0.9rem;
-  transition: transform 0.2s ease-in-out;
+  width: 160px;
+  border: none;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
 }
 
 .season-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .season-card .card-img-top {
@@ -32,6 +60,9 @@
   width: 100%;
   aspect-ratio: 2 / 3;
   object-fit: cover;
+  border-radius: 12px;
+  transform: translateY(-50px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2) !important;
 }
 
 .details-poster-placeholder {
@@ -40,43 +71,430 @@
   background-color: #f8f9fa;
   color: #6c757d;
   font-weight: bold;
-  border: 1px dashed #ced4da;
 }
 
-.availability-table td {
-  vertical-align: middle;
+.studio-name {
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
-@media (max-width: 767px) {
-  .availability-table thead {
+.media-info-card {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  margin-top: 5vh;
+  display: flex;
+}
+
+.media-info-card > .d-flex {
+  width: 100%;
+  align-items: center;
+}
+
+.season-page .media-info-card > .d-flex {
+  align-items: flex-start;
+}
+
+.media-info-poster-wrapper {
+  flex-shrink: 0;
+  margin-right: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.media-info-poster {
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.media-info-poster-placeholder {
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
+.media-info-metadata {
+  max-width: 120px;
+}
+
+.media-info-main {
+  min-width: 0;
+}
+
+.media-info-main h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@media (min-width: 768px) {
+  .media-info-card {
+    display: flex;
+    flex-direction: row;
+  }
+
+  .media-info-poster-wrapper {
+    flex-shrink: 0;
+    margin-right: 1.5rem;
+    margin-bottom: 0;
+    width: auto;
+  }
+
+  .media-info-poster,
+  .media-info-poster-placeholder {
+    width: 200px;
+  }
+
+  .media-info-metadata {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .media-info-card {
+    margin-top: 20px;
+    padding: 1rem;
+    border-radius: 20px;
+    margin-left: -15px;
+    margin-right: -15px;
+    width: calc(100% + 30px);
+  }
+
+  .media-info-poster-wrapper {
+    margin-right: 0;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .media-info-poster,
+  .media-info-poster-placeholder {
+    width: 100px;
+  }
+
+  .media-info-metadata {
+    max-width: 100%;
+    width: 100%;
+    text-align: center;
+  }
+
+  .media-info-main {
+    width: 100%;
+  }
+
+  .media-info-main h1 {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .media-info-poster-wrapper h1 {
     display: none;
   }
 
-  .availability-table tr {
-    display: block;
+  .media-info-metadata {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .details-poster {
+    transform: translateY(0);
     margin-bottom: 1rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
+  }
+  .details-content {
+    margin-top: 20px;
+    padding: 1rem;
+    border-radius: 0;
+    margin-left: -15px;
+    margin-right: -15px;
+    width: calc(100% + 30px);
   }
 
-  .availability-table td {
-    display: block;
-    text-align: right;
-    border-bottom: 1px solid #eee;
-    position: relative;
-    padding-left: 50%;
-  }
-  
-  .availability-table td:last-child {
-    border-bottom: none;
+  .details-content h1 {
+    font-size: 1.75rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.3;
   }
 
-  .availability-table td::before {
-    content: attr(data-label);
-    position: absolute;
-    left: 0.75rem;
-    width: 45%;
-    text-align: left;
-    font-weight: bold;
+  .details-content .lead {
+    font-size: 0.95rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
+
+  .details-content .lead span {
+    white-space: nowrap;
+  }
+
+  .source-section {
+    margin-bottom: 1.5rem;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .source-section .d-flex {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+
+  .source-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0;
+  }
+
+  .source-section .btn {
+    padding: 0.35rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  .movie-details-card {
+    padding-left: 0 !important;
+  }
+
+  .movie-details-card > .d-flex {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .movie-details-card .badge {
+    margin-bottom: 0;
+  }
+
+  .movie-details-card .d-flex > .d-flex {
+    margin-top: 0;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .source-seasons-container {
+    padding: 0.75rem;
+  }
+
+  .seasons-list {
+    padding: 0.25rem;
+  }
+
+  .sticky-metadata-bar {
+    display: none;
+  }
+}
+
+.backdrop-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60vh;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+  opacity: 0.3;
+}
+
+.details-content {
+  margin-top: 5vh;
+  padding: 2rem;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.availability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.availability-card {
+  background: #ffffff;
+  border: 1px solid #eef0f2;
+  border-radius: 12px;
+  transition: border-color 0.2s;
+  padding-bottom: 0.5rem;
+}
+
+.movie-details-card {
+  padding: 0;
+}
+
+.movie-details-card svg {
+  flex-shrink: 0;
+}
+
+.server-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3436;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtitles-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.text-muted-italic {
+  font-style: italic;
+  color: #adb5bd;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 576px) {
+  .availability-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sticky-metadata-bar {
+  position: fixed;
+  top: -100px;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background-color: #333333;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease-in-out;
+  z-index: 1030;
+}
+
+.sticky-metadata-bar.visible {
+  transform: translateY(
+    140px
+  );
+}
+
+.sticky-poster {
+  width: 35px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.summary-wrapper {
+  margin-bottom: 1rem;
+}
+
+.summary-text {
+  transition: max-height 0.3s ease-in-out;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+.summary-text.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  max-height: 6em;
+}
+
+.subtitle-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.gap-3 {
+  gap: 1rem;
+}
+
+.availability-grid .availability-card:nth-child(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.sources-stack .source-section:not(:first-child) {
+  border-top: 1px solid #eef0f2;
+  margin-top: 2rem;
+}
+
+.source-section {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.source-section .flex-grow-1 {
+  min-height: auto !important;
+}
+
+.plex-open-button {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.seasons-list-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.seasons-list {
+  scroll-behavior: smooth;
+}
+
+.scroll-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e0e0e0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+}
+
+.scroll-button:hover {
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.scroll-button.left {
+  left: -18px;
+}
+
+.scroll-button.right {
+  right: -18px;
+}
+
+.scroll-button svg {
+  width: 28px;
+  height: 28px;
+  color: #333;
 }

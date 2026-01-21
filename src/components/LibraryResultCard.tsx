@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SubtitlesIcon } from './icons';
-import { formatResolution } from '../utils/formatting';
+import { formatResolution, formatDuration } from '../utils/formatting';
 import { GroupedResult, MediaDetails, MediaVersion } from '../types';
 import { useApiFetch } from '../utils/api';
 
@@ -102,12 +102,21 @@ const LibraryResultCard = ({ item }: LibraryResultCardProps) => {
       {cardImage}
       <div className="card-body p-2 d-flex flex-column">
         <h3 className="card-title h6 mb-1">{item.title}</h3>
-        <p className="card-year text-muted small">{item.year}</p>
+        <div className="mb-1">
+          <p
+            className="card-year text-muted small mb-0 d-flex align-items-center flex-wrap"
+            style={{ gap: '0.5rem' }}
+          >
+            {item.year && <span>{item.year}</span>}
+            {item.contentRating && <span>{item.contentRating}</span>}
+            {item.duration && <span>{formatDuration(item.duration)}</span>}
+          </p>
+        </div>
         <div className="server-pills mt-auto">
           {item.itemType === 'movie' && (
             <div className="version-info mt-1">
               {versions.map((v, i) => (
-                <span key={i} className="badge badge-soft-secondary mr-1">
+                <span key={i} className="badge badge-secondary mr-1">
                   {formatResolution(v.videoResolution)}
                 </span>
               ))}
