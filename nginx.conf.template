@@ -1,5 +1,6 @@
 server {
     listen 8080;
+    merge_slashes off;
     
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-XSS-Protection "1; mode=block";
