@@ -1,12 +1,14 @@
+worker_processes 1;
+
 server {
     listen 8080;
     merge_slashes off;
-    
+
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-XSS-Protection "1; mode=block";
     add_header X-Content-Type-Options "nosniff";
     add_header Referrer-Policy "strict-origin-when-cross-origin";
-    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https://profiles.csh.rit.edu; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://sso.csh.rit.edu;";
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https://profiles.csh.rit.edu; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' blob: https://sso.csh.rit.edu;";
 
     location / {
         root /usr/share/nginx/html;
@@ -16,7 +18,12 @@ server {
 
     location /api/ {
         proxy_pass ${BACKEND_URL}/api/;
-        
+
+        proxy_buffers 16 16k;
+        proxy_buffer_size 32k;
+        proxy_busy_buffers_size 32k;
+        proxy_temp_file_write_size 64k;
+
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
