@@ -340,7 +340,7 @@ const MediaDetailsPage = () => {
 
                 return (
                   <div key={server.serverId} className="source-section">
-                    <div className="d-flex align-items-start justify-content-between flex-wrap">
+                    <div className="d-flex align-items-start justify-content-between">
                       <div className="flex-grow-1 d-flex flex-column">
                         <h3 className="h4 mb-0">{server.serverName}</h3>
                         <div className="movie-details-card pt-2">

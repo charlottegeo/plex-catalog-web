@@ -359,7 +359,7 @@ const Home = () => {
               <FilmReelIcon className="empty-state-ghost-icon" />
               <div className="empty-state-content">
                 <h2 className="empty-state-headline text-bold">
-                  Browse through
+                  Search through
                 </h2>
                 <h3 className="empty-state-headline text-muted">
                   {systemInfo ? `${roundedTotal}+ Titles` : '...'}
