@@ -8,7 +8,7 @@ ARG VITE_SSO_AUTHORITY
 ARG VITE_SSO_ENABLED
 
 COPY package.json pnpm-lock.yaml /app/
-RUN pnpm i --frozen-lockfile
+RUN pnpm i --frozen-lockfile --package-import-method=copy
 
 COPY . /app/
 RUN pnpm run build
