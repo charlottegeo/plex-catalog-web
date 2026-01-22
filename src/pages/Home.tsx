@@ -325,22 +325,24 @@ const Home = () => {
               placeholder="Search for a movie or show..."
             />
           </div>
-          <div
-            className="card shadow-sm border-0 sticky-top"
-            style={{ top: '20px' }}
-          >
+          {hasSearched && (
             <div
-              className="card-header bg-white d-flex justify-content-between align-items-center"
-              style={{ cursor: 'pointer' }}
-              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="card shadow-sm border-0 sticky-top"
+              style={{ top: '20px' }}
             >
-              <h5 className="mb-0">Filters</h5>
-              <span className={`caret ${filtersOpen ? 'open' : ''}`} />
+              <div
+                className="card-header bg-white d-flex justify-content-between align-items-center"
+                style={{ cursor: 'pointer' }}
+                onClick={() => setFiltersOpen(!filtersOpen)}
+              >
+                <h5 className="mb-0">Filters</h5>
+                <span className={`caret ${filtersOpen ? 'open' : ''}`} />
+              </div>
+              <Collapse isOpen={filtersOpen}>
+                <FilterControls />
+              </Collapse>
             </div>
-            <Collapse isOpen={filtersOpen}>
-              <FilterControls />
-            </Collapse>
-          </div>
+          )}
         </div>
 
         <div className="col-12 col-lg-9">
