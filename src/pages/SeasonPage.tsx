@@ -10,6 +10,7 @@ import './MediaDetailsPage.css';
 import './SeasonPage.css';
 import { useApiFetch } from '../utils/api';
 import { Modal, ModalHeader, ModalBody, ModalFooter, Button } from 'reactstrap';
+import { Server } from '../types';
 
 const EpisodeSkeleton = () => (
   <div className="episode-card card mb-3">
@@ -237,6 +238,7 @@ const SeasonPage = () => {
     useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingPlexUrl, setPendingPlexUrl] = useState<string | null>(null);
+  const [serverName, setServerName] = useState<string | null>(null);
   const seasonSummaryRef = useRef<HTMLParagraphElement>(null);
 
   const apiFetch = useApiFetch();
@@ -284,6 +286,25 @@ const SeasonPage = () => {
     window.addEventListener('resize', checkTruncation);
     return () => window.removeEventListener('resize', checkTruncation);
   }, [season?.summary, isSummaryExpanded]);
+
+  useEffect(() => {
+    const fetchServerName = async () => {
+      if (!serverId) return;
+      try {
+        const response = await apiFetch('/api/servers');
+        if (response.ok) {
+          const servers = (await response.json()) as Server[];
+          const server = servers.find((s) => s.id === serverId);
+          if (server) {
+            setServerName(server.name);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch server name', error);
+      }
+    };
+    fetchServerName();
+  }, [serverId, apiFetch]);
 
   useEffect(() => {
     if (!serverId || !seasonId) return;
@@ -351,6 +372,11 @@ const SeasonPage = () => {
                 <li className="breadcrumb-item">
                   <Link to={`/media/${show.guid}`}>{show.title}</Link>
                 </li>
+                {serverName && (
+                  <li className="breadcrumb-item">
+                    <Link to="/servers">{serverName}</Link>
+                  </li>
+                )}
                 <li className="breadcrumb-item active" aria-current="page">
                   {season?.title || 'Season'}
                 </li>
@@ -395,6 +421,7 @@ const SeasonPage = () => {
               <p
                 ref={seasonSummaryRef}
                 className={`summary-text ${!isSummaryExpanded ? 'clamped' : ''}`}
+                style={{ maxWidth: '80%' }}
               >
                 {season?.summary}
               </p>
