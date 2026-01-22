@@ -135,7 +135,7 @@ const MediaDetailsPage = () => {
             ? details.artPath.substring(1)
             : details.artPath;
           const response = await apiFetch(
-            `/api/servers/${serverId}/image/${imagePath}`
+            `/api/servers/${serverId}/image/${imagePath}?width=1920&height=1080`
           );
           if (response.ok) {
             const blob = await response.blob();
@@ -163,7 +163,7 @@ const MediaDetailsPage = () => {
             ? details.thumbPath.substring(1)
             : details.thumbPath;
           const response = await apiFetch(
-            `/api/servers/${serverId}/image/${imagePath}`
+            `/api/servers/${serverId}/image/${imagePath}?width=400&height=600`
           );
           if (response.ok) {
             const blob = await response.blob();

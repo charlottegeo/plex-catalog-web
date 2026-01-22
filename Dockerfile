@@ -15,6 +15,8 @@ RUN pnpm run build
 
 FROM docker.io/nginxinc/nginx-unprivileged:alpine
 
+RUN sed -i 's/worker_processes  auto;/worker_processes  1;/' /etc/nginx/nginx.conf
+
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=node /app/dist /usr/share/nginx/html
 

@@ -19,7 +19,7 @@ server {
 
         proxy_buffers 16 16k;
         proxy_buffer_size 32k;
-        proxy_busy_buffers_size 32k;
+        proxy_busy_buffers_size 48k;
         proxy_temp_file_write_size 64k;
 
         proxy_set_header X-Real-IP \$remote_addr;

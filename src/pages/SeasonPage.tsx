@@ -82,7 +82,7 @@ const EpisodeCard = ({
             ? episode.thumbPath.substring(1)
             : episode.thumbPath;
           const response = await apiFetch(
-            `/api/servers/${serverId}/image/${imagePath}`
+            `/api/servers/${serverId}/image/${imagePath}?width=400&height=225`
           );
           if (response.ok) {
             const blob = await response.blob();
@@ -316,7 +316,7 @@ const SeasonPage = () => {
             ? season.thumbPath.substring(1)
             : season.thumbPath;
           const response = await apiFetch(
-            `/api/servers/${serverId}/image/${imagePath}`
+            `/api/servers/${serverId}/image/${imagePath}?width=400&height=600`
           );
           if (response.ok) {
             const blob = await response.blob();

@@ -47,7 +47,7 @@ const SeasonCard = ({
             ? season.thumbPath.substring(1)
             : season.thumbPath;
           const response = await apiFetch(
-            `/api/servers/${serverId}/image/${imagePath}`
+            `/api/servers/${serverId}/image/${imagePath}?width=200&height=300`
           );
           if (response.ok) {
             const blob = await response.blob();

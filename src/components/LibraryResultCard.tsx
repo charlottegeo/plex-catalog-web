@@ -60,7 +60,7 @@ const LibraryResultCard = ({ item }: LibraryResultCardProps) => {
             ? item.thumbPath.substring(1)
             : item.thumbPath;
           const response = await apiFetch(
-            `/api/servers/${item.servers[0].id}/image/${imagePath}`
+            `/api/servers/${item.servers[0].id}/image/${imagePath}?width=300&height=450`
           );
           if (response.ok) {
             const blob = await response.blob();
