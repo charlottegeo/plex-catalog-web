@@ -1,35 +1,16 @@
 .seasons-list {
   display: flex;
   overflow-x: auto;
-  gap: 1rem;
-  padding-bottom: 1rem;
+  gap: 1.25rem;
+  padding: 0.5rem;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
 }
 
 .season-link,
 .season-link:hover {
   color: inherit;
   text-decoration: none;
-}
-
-.source-indicator {
-  width: 4px;
-  height: 24px;
-  border-radius: 2px;
-}
-
-.source-seasons-container {
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 16px;
-  border: 1px solid #eee;
-}
-
-.seasons-list {
-  display: flex;
-  overflow-x: auto;
-  gap: 1.25rem;
-  padding: 0.5rem;
-  scrollbar-width: thin;
 }
 
 .season-card {
@@ -54,6 +35,74 @@
   aspect-ratio: 2 / 3;
   object-fit: cover;
   background-color: #eee;
+}
+
+.seasons-list-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  width: 100%;
+}
+
+.scroll-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e0e0e0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+}
+
+.scroll-button:hover {
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.scroll-button.left {
+  left: -18px;
+}
+
+.scroll-button.right {
+  right: -18px;
+}
+
+@media (max-width: 768px) {
+  .scroll-button.left {
+    left: 0;
+  }
+
+  .scroll-button.right {
+    right: 0;
+  }
+}
+
+.scroll-button svg {
+  width: 28px;
+  height: 28px;
+  color: #333;
+}
+
+.source-indicator {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+}
+
+.source-seasons-container {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 16px;
+  border: 1px solid #eee;
 }
 
 .details-poster {
@@ -126,6 +175,15 @@
   max-width: 120px;
 }
 
+.media-info-metadata .badge {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.media-info-metadata span:not(.badge) {
+  font-size: 0.95rem;
+}
+
 .media-info-main {
   min-width: 0;
 }
@@ -190,6 +248,19 @@
     text-align: center;
   }
 
+  .media-info-metadata .d-flex {
+    justify-content: center;
+  }
+
+  .media-info-metadata .badge {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .media-info-metadata span:not(.badge) {
+    font-size: 0.95rem;
+  }
+
   .media-info-main {
     width: 100%;
   }
@@ -199,6 +270,20 @@
     text-align: center;
   }
 
+  .season-page .media-info-main > .d-flex {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .season-page .media-info-main h1 {
+    text-align: center;
+    width: 100%;
+  }
+
+  .season-page .plex-open-button {
+    margin-top: 0.5rem;
+  }
+
   .media-info-poster-wrapper h1 {
     display: none;
   }
@@ -206,94 +291,10 @@
   .media-info-metadata {
     justify-content: center;
   }
-}
 
-@media (max-width: 768px) {
   .details-poster {
     transform: translateY(0);
     margin-bottom: 1rem;
-  }
-  .details-content {
-    margin-top: 20px;
-    padding: 1rem;
-    border-radius: 0;
-    margin-left: -15px;
-    margin-right: -15px;
-    width: calc(100% + 30px);
-  }
-
-  .details-content h1 {
-    font-size: 1.75rem;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    line-height: 1.3;
-  }
-
-  .details-content .lead {
-    font-size: 0.95rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .details-content .lead span {
-    white-space: nowrap;
-  }
-
-  .source-section {
-    margin-bottom: 1.5rem;
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 12px;
-  }
-
-  .source-section .d-flex {
-    flex-wrap: wrap;
-    align-items: flex-start !important;
-    gap: 0.5rem;
-  }
-
-  .source-section h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0;
-  }
-
-  .source-section .btn {
-    padding: 0.35rem 0.75rem;
-    white-space: nowrap;
-  }
-
-  .movie-details-card {
-    padding-left: 0 !important;
-  }
-
-  .movie-details-card > .d-flex {
-    align-items: center;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .movie-details-card .badge {
-    margin-bottom: 0;
-  }
-
-  .movie-details-card .d-flex > .d-flex {
-    margin-top: 0;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  .source-seasons-container {
-    padding: 0.75rem;
-  }
-
-  .seasons-list {
-    padding: 0.25rem;
-  }
-
-  .sticky-metadata-bar {
-    display: none;
   }
 }
 
@@ -319,6 +320,40 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
+@media (max-width: 768px) {
+  .details-content {
+    margin-top: 20px;
+    padding: 1rem;
+    border-radius: 20px;
+    margin-left: -15px;
+    margin-right: -15px;
+    width: calc(100% + 30px);
+  }
+
+  .details-content h2 {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .details-content h1 {
+    font-size: 1.75rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.3;
+  }
+
+  .details-content .lead {
+    font-size: 0.95rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .details-content .lead span {
+    white-space: nowrap;
+  }
+}
+
 .availability-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -334,12 +369,51 @@
   padding-bottom: 0.5rem;
 }
 
+.availability-grid .availability-card:nth-child(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+@media (max-width: 576px) {
+  .availability-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .movie-details-card {
   padding: 0;
 }
 
 .movie-details-card svg {
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .movie-details-card {
+    padding-left: 0 !important;
+  }
+
+  .movie-details-card > .d-flex {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .movie-details-card .badge {
+    margin-bottom: 0;
+  }
+
+  .movie-details-card .d-flex > .d-flex {
+    margin-top: 0;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .movie-details-card .d-flex > .d-flex .small {
+    white-space: normal;
+    word-break: break-word;
+  }
 }
 
 .server-name {
@@ -366,36 +440,6 @@
   font-size: 0.85rem;
 }
 
-@media (max-width: 576px) {
-  .availability-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.sticky-metadata-bar {
-  position: fixed;
-  top: -100px;
-  left: 0;
-  right: 0;
-  height: 70px;
-  background-color: #333333;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  transition: transform 0.3s ease-in-out;
-  z-index: 1030;
-}
-
-.sticky-metadata-bar.visible {
-  transform: translateY(
-    140px
-  );
-}
-
-.sticky-poster {
-  width: 35px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 4px;
-}
 
 .summary-wrapper {
   margin-bottom: 1rem;
@@ -415,21 +459,6 @@
   max-height: 6em;
 }
 
-.subtitle-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-left: 0.5rem;
-}
-
-.gap-3 {
-  gap: 1rem;
-}
-
-.availability-grid .availability-card:nth-child(odd) {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
 .sources-stack .source-section:not(:first-child) {
   border-top: 1px solid #eef0f2;
   margin-top: 2rem;
@@ -446,55 +475,106 @@
   min-height: auto !important;
 }
 
+@media (max-width: 768px) {
+  .source-section {
+    margin-bottom: 1.5rem;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .source-section .d-flex {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+
+  .source-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0;
+  }
+
+  .source-section .btn {
+    padding: 0.35rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  .movie-details-card .d-flex {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .movie-details-card .d-flex > .d-flex {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .movie-details-card .d-flex > .d-flex > .small {
+    flex-wrap: wrap;
+    word-break: break-word;
+  }
+
+  .source-section > .d-flex {
+    align-items: flex-start;
+  }
+
+  .source-section > .d-flex > .flex-grow-1 {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .source-section .plex-open-button {
+    align-self: center;
+    margin-top: 0;
+  }
+
+  .source-section > .d-flex.justify-content-between {
+    flex-wrap: nowrap;
+  }
+
+  .source-section > .d-flex.justify-content-between > .flex-grow-1 {
+    flex: 1 1 0%;
+    min-width: 0;
+    margin-right: 0.5rem;
+  }
+
+  .source-seasons-container {
+    padding: 0.75rem;
+    overflow: hidden;
+  }
+
+  .seasons-list {
+    padding: 0.25rem;
+  }
+}
+
 .plex-open-button {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.seasons-list-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.seasons-list {
-  scroll-behavior: smooth;
-}
-
-.scroll-button {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  background-color: rgba(255, 255, 255, 0.9);
-  border: 1px solid #e0e0e0;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease-in-out;
+  gap: 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 0.4rem 0.75rem;
 }
 
-.scroll-button:hover {
-  background-color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+@media (max-width: 768px) {
+  .plex-open-button {
+    width: auto;
+    align-self: center;
+  }
 }
 
-.scroll-button.left {
-  left: -18px;
+.subtitle-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
 }
 
-.scroll-button.right {
-  right: -18px;
-}
-
-.scroll-button svg {
-  width: 28px;
-  height: 28px;
-  color: #333;
+.gap-3 {
+  gap: 1rem;
 }

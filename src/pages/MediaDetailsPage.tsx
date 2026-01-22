@@ -73,7 +73,6 @@ const MediaDetailsPage = () => {
   const [artImageUrl, setArtImageUrl] = useState<string | null>(null);
   const [posterImageUrl, setPosterImageUrl] = useState<string | null>(null);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-  const [isSticky, setIsSticky] = useState(false);
   const [isSummaryTruncated, setIsSummaryTruncated] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingPlexUrl, setPendingPlexUrl] = useState<string | null>(null);
@@ -105,28 +104,13 @@ const MediaDetailsPage = () => {
   };
 
   useEffect(() => {
-    const handleScroll = () => {
-      const header = document.querySelector('.details-content');
-      if (header) {
-        setIsSticky(
-          window.scrollY > header.getBoundingClientRect().height - 200
-        );
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
     if (!guid) return;
     const fetchDetails = async () => {
-      const newGuid = guid.startsWith('plex://') ? guid : `plex://${guid}`;
       setLoading(true);
       setError(null);
       try {
         const response = await apiFetch(
-          `/api/media/${encodeURIComponent(newGuid)}`
+          `/api/media/${encodeURIComponent(guid)}`
         );
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
@@ -250,35 +234,6 @@ const MediaDetailsPage = () => {
 
   return (
     <>
-      <div className={`sticky-metadata-bar ${isSticky ? 'visible' : ''}`}>
-        <div className="container d-flex align-items-center h-100">
-          {posterImageUrl && (
-            <img
-              src={posterImageUrl}
-              alt={details.title}
-              className="sticky-poster rounded mr-3"
-            />
-          )}
-          <div className="flex-grow-1 overflow-hidden">
-            <h5 className="mb-0 text-white text-truncate">{details.title}</h5>
-            <small className="text-muted">{details.year}</small>
-          </div>
-          {details.availableOn.length > 0 && (
-            <a
-              href={getPlexUrl(
-                details.availableOn[0].serverId,
-                details.availableOn[0].ratingKey
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-success btn-sm d-flex align-items-center ml-3 plex-open-button"
-            >
-              <PlexIcon className="mr-2" /> Watch
-            </a>
-          )}
-        </div>
-      </div>
-
       <div className="container mt-4">
         {artImageUrl && (
           <div
@@ -420,7 +375,7 @@ const MediaDetailsPage = () => {
                         }
                         className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
                       >
-                        <PlexIcon className="mr-2" /> Open
+                        <PlexIcon /> Open
                       </a>
                     </div>
                   </div>
@@ -457,7 +412,7 @@ const MediaDetailsPage = () => {
                       }
                       className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
                     >
-                      <PlexIcon className="mr-2" /> Open
+                      <PlexIcon /> Open
                     </a>
                   </div>
                   <div className="source-seasons-container">
@@ -489,13 +444,6 @@ const MediaDetailsPage = () => {
             <p className="mb-0">
               You must be logged into the CSH Plex account for this link to
               work.
-            </p>
-
-            <p className="mb-0">
-              <em className="text-muted x-small">
-                If the page takes a long time to load or does not work, I can
-                remove this feature.
-              </em>
             </p>
           </div>
         </ModalBody>

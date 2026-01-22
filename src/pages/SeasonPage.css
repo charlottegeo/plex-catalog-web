@@ -25,9 +25,17 @@
   }
 }
 
+@media (max-width: 768px) {
+  .episode-thumb-wrapper {
+    padding: 0.75rem;
+    margin-right: 0;
+  }
+}
+
 .episode-card .clamped-summary {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -44,28 +52,17 @@
   font-weight: 600;
 }
 
+.episode-card .badge {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.episode-card .small.text-muted {
+  font-size: 0.95rem !important;
+}
+
 .version-info svg {
   flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-  .episode-thumb-wrapper {
-    padding: 0.75rem;
-    margin-right: 0;
-  }
-}
-
-.summary-text {
-  transition: max-height 0.4s ease-in-out;
-  overflow: hidden;
-  margin-bottom: 0;
-}
-
-.summary-text.clamped {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  max-height: 4.5em;
 }
 
 .breadcrumb-container {

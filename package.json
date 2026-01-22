@@ -36,6 +36,7 @@
     "eslint-plugin-react-refresh": "^0.4.9",
     "globals": "^15.9.0",
     "prettier": "^3.7.4",
+    "purgecss": "^7.0.2",
     "sass-embedded": "^1.79.4",
     "typescript": "~5.5.3",
     "typescript-eslint": "^8.53.1",

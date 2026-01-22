@@ -30,7 +30,6 @@ export function useApiFetch(): ApiFetch {
       if (SSOEnabled && accessToken && accessToken.trim() !== '') {
         if (!headers.has('Authorization')) {
           headers.set('Authorization', `Bearer ${accessToken}`);
-          console.log('Added Authorization header');
         }
       } else {
         console.log('No Authorization header added:', {

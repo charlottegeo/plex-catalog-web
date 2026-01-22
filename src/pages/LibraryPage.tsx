@@ -34,7 +34,6 @@ const LibraryPage = () => {
   const [items, setItems] = useState<GroupedResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isScrolled, setIsScrolled] = useState(false);
 
   const [contentRatingFilter, setContentRatingFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('title');
@@ -44,12 +43,6 @@ const LibraryPage = () => {
   const [filtersOpen, setFiltersOpen] = useState(true);
 
   const apiFetch = useApiFetch();
-
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 0);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -206,13 +199,18 @@ const LibraryPage = () => {
 
   return (
     <div className="container-fluid mt-4">
-      <nav
-        aria-label="breadcrumb"
-        className={`breadcrumb-container sticky-top ${isScrolled ? 'scrolled' : ''}`}
-      >
+      <nav aria-label="breadcrumb" className="breadcrumb-container">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
-            <Link to="/">Home</Link>
+            <Link
+              to="/"
+              onClick={() => {
+                sessionStorage.removeItem('lastSearchResults');
+                sessionStorage.removeItem('lastSearchQuery');
+              }}
+            >
+              Home
+            </Link>
           </li>
           <li className="breadcrumb-item">{decodeURIComponent(serverName!)}</li>
           <li className="breadcrumb-item active">
@@ -220,20 +218,12 @@ const LibraryPage = () => {
           </li>
         </ol>
       </nav>
-
-      <div className="mb-4 mt-2">
-        <h1 className="mb-0">Browsing: {decodeURIComponent(libraryName!)}</h1>
-      </div>
-
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="row">
         {!loading && items.length > 0 && (
-          <div className="col-12 col-lg-3 mb-4">
-            <div
-              className="card shadow-sm border-0 sticky-top"
-              style={{ top: '20px' }}
-            >
+          <div className="col-12 col-lg-3 mb-4 library-filters-column">
+            <div className="card shadow-sm border-0 sticky-top library-filters-card">
               <div
                 className="card-header bg-white d-flex justify-content-between align-items-center"
                 style={{ cursor: 'pointer' }}
@@ -254,7 +244,7 @@ const LibraryPage = () => {
             <div className="results-count-header">
               <p className="text-muted mb-3 mb-lg-0">
                 {sortedItems.length}{' '}
-                {sortedItems.length === 1 ? 'item' : 'items'}
+                {sortedItems.length === 1 ? 'title' : 'titles'}
               </p>
             </div>
           )}
@@ -265,7 +255,7 @@ const LibraryPage = () => {
                 ))
               : paginatedItems.map((item) => (
                   <Link
-                    to={`/media/${item.guid.replace('plex://', '')}`}
+                    to={`/media/${item.guid}`}
                     key={item.guid}
                     className="result-link"
                     state={{ fromLibrary: location.pathname }}

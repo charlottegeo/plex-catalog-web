@@ -1,3 +1,4 @@
+import 'csh-material-bootstrap/dist/csh-material-bootstrap.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { useState } from 'react';
 import Home from './pages/Home';
@@ -6,7 +7,6 @@ import SeasonPage from './pages/SeasonPage';
 import LibraryPage from './pages/LibraryPage';
 import ServersPage from './pages/ServersPage';
 import PageContainer from './containers/PageContainer';
-import 'csh-material-bootstrap/dist/csh-material-bootstrap.css';
 import NotFound from './pages/NotFound';
 
 type Props = {

@@ -42,7 +42,8 @@ export type SystemInfo = {
   syncIntervalHours: number;
   totalMovies: number;
   totalShows: number;
-  serverCount: number;
+  onlineServers: number;
+  offlineServers: number;
 };
 
 export type Server = {

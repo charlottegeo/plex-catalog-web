@@ -149,11 +149,8 @@ const ResultCard = ({
         if (entry.isIntersecting) {
           observer.disconnect();
           try {
-            const fullGuid = item.guid.startsWith('plex://')
-              ? item.guid
-              : `plex://${item.guid}`;
             const response = await apiFetch(
-              `/api/media/${encodeURIComponent(fullGuid)}`
+              `/api/media/${encodeURIComponent(item.guid)}`
             );
             if (response.ok) {
               const data = (await response.json()) as MediaDetails;

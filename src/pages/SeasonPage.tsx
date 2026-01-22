@@ -6,7 +6,7 @@ import {
   formatDuration,
   formatDate,
 } from '../utils/formatting';
-import '../pages/MediaDetailsPage.css';
+import './MediaDetailsPage.css';
 import './SeasonPage.css';
 import { useApiFetch } from '../utils/api';
 import { Modal, ModalHeader, ModalBody, ModalFooter, Button } from 'reactstrap';
@@ -349,9 +349,7 @@ const SeasonPage = () => {
             ) : (
               <>
                 <li className="breadcrumb-item">
-                  <Link to={`/media/${show.guid.replace('plex://', '')}`}>
-                    {show.title}
-                  </Link>
+                  <Link to={`/media/${show.guid}`}>{show.title}</Link>
                 </li>
                 <li className="breadcrumb-item active" aria-current="page">
                   {season?.title || 'Season'}
@@ -389,7 +387,7 @@ const SeasonPage = () => {
                   rel="noopener noreferrer"
                   className="btn btn-warning btn-sm plex-open-button"
                 >
-                  <PlexIcon className="mr-2" /> Open
+                  <PlexIcon /> Open
                 </a>
               )}
             </div>
@@ -454,13 +452,6 @@ const SeasonPage = () => {
             <p className="mb-0">
               You must be logged into the CSH Plex account for this link to
               work.
-            </p>
-
-            <p className="mb-0">
-              <em className="text-muted x-small">
-                If the page takes a long time to load or does not work, I can
-                remove this feature.
-              </em>
             </p>
           </div>
         </ModalBody>

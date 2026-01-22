@@ -44,9 +44,9 @@ export default function Footer() {
                   <span className="mr-3">
                     <strong>{systemInfo.totalShows}</strong> Shows
                   </span>
-                  <span>
-                    <strong>{systemInfo.serverCount}</strong> Server
-                    {systemInfo.serverCount !== 1 ? 's' : ''}
+                  <span className="mr-3">
+                    <strong>{systemInfo.onlineServers}</strong> Online +{' '}
+                    <strong>{systemInfo.offlineServers}</strong> Offline Servers
                   </span>
                 </div>
 

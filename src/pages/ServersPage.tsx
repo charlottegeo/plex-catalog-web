@@ -60,8 +60,6 @@ const ServersPage = () => {
 
   return (
     <div className="container mt-4">
-      <h1 className="mb-4">Servers</h1>
-
       {error && (
         <Alert color="danger" toggle={() => setError(null)}>
           {error}

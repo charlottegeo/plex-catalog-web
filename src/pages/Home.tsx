@@ -356,16 +356,12 @@ const Home = () => {
             <div className="empty-state-section">
               <FilmReelIcon className="empty-state-ghost-icon" />
               <div className="empty-state-content">
-                <h2 className="empty-state-headline">
-                  {systemInfo && roundedTotal > 0
-                    ? `Search ${roundedTotal}+ Titles`
-                    : 'Search Titles'}
+                <h2 className="empty-state-headline text-bold">
+                  Browse through
                 </h2>
-                <p className="empty-state-subtext small text-uppercase text-muted">
-                  {systemInfo
-                    ? `Checking availability across ${systemInfo.serverCount} servers`
-                    : 'Checking availability across your servers'}
-                </p>
+                <h3 className="empty-state-headline text-muted">
+                  {systemInfo ? `${roundedTotal}+ Titles` : '...'}
+                </h3>
               </div>
             </div>
           )}
@@ -388,7 +384,7 @@ const Home = () => {
                 ))
               : paginatedResults.map((item) => (
                   <Link
-                    to={`/media/${item.guid.replace('plex://', '')}`}
+                    to={`/media/${item.guid}`}
                     key={item.guid}
                     className="result-link"
                   >
