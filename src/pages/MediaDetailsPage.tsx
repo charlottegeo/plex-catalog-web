@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'reactstrap';
+import { PlexIcon, SubtitlesIcon } from '../components/icons';
 import TVShowSeasons from '../components/TVShowSeasons';
-import './MediaDetailsPage.css';
-import { SubtitlesIcon, PlexIcon } from '../components/icons';
-import { formatResolution, formatDuration } from '../utils/formatting';
 import { useApiFetch } from '../utils/api';
-import { Modal, ModalHeader, ModalBody, ModalFooter, Button } from 'reactstrap';
+import { formatDuration, formatResolution } from '../utils/formatting';
+import './MediaDetailsPage.css';
 
 const MediaDetailsSkeleton = () => (
   <div className="container mt-4">
@@ -76,6 +76,9 @@ const MediaDetailsPage = () => {
   const [isSummaryTruncated, setIsSummaryTruncated] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingPlexUrl, setPendingPlexUrl] = useState<string | null>(null);
+  const [pendingServerName, setPendingServerName] = useState<string | null>(
+    null
+  );
   const [seasonCounts, setSeasonCounts] = useState<Record<string, number>>({});
   const summaryRef = useRef<HTMLParagraphElement>(null);
 
@@ -87,11 +90,13 @@ const MediaDetailsPage = () => {
   const handlePlexButtonClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
     serverId: string,
-    ratingKey: string
+    ratingKey: string,
+    serverName: string
   ) => {
     e.preventDefault();
     const url = getPlexUrl(serverId, ratingKey);
     setPendingPlexUrl(url);
+    setPendingServerName(serverName);
     setModalOpen(true);
   };
 
@@ -100,6 +105,7 @@ const MediaDetailsPage = () => {
       window.open(pendingPlexUrl, '_blank', 'noopener,noreferrer');
       setModalOpen(false);
       setPendingPlexUrl(null);
+      setPendingServerName(null);
     }
   };
 
@@ -370,7 +376,8 @@ const MediaDetailsPage = () => {
                           handlePlexButtonClick(
                             e,
                             server.serverId,
-                            server.ratingKey
+                            server.ratingKey,
+                            server.serverName
                           )
                         }
                         className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
@@ -407,7 +414,8 @@ const MediaDetailsPage = () => {
                         handlePlexButtonClick(
                           e,
                           server.serverId,
-                          server.ratingKey
+                          server.ratingKey,
+                          server.serverName
                         )
                       }
                       className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
@@ -437,8 +445,14 @@ const MediaDetailsPage = () => {
         <ModalBody>
           <div className="text-center">
             <p className="mb-0">
-              This will open <strong>{details.title}</strong> on{' '}
-              <strong>{details.availableOn[0].serverName}</strong> in a new tab.
+              This will open <strong>{details.title}</strong>
+              {pendingServerName && (
+                <>
+                  {' on '}
+                  <strong>{pendingServerName}</strong>
+                </>
+              )}
+              {' in a new tab.'}
             </p>
 
             <p className="mb-0">

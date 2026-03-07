@@ -3,6 +3,7 @@ import {
   MdChevronLeft,
   MdChevronRight,
   MdFilterList,
+  MdPlayCircleFilled,
 } from 'react-icons/md';
 import { FaSortAmountUp, FaSortAmountDown } from 'react-icons/fa';
 import { PiFilmReelFill } from 'react-icons/pi';
@@ -48,4 +49,8 @@ export const SortDescIcon = ({ className, style, onClick }: IconProps) => (
 
 export const FilmReelIcon = ({ className, style }: IconProps) => (
   <PiFilmReelFill className={className} style={style} />
+);
+
+export const PlayIcon = ({ className, style }: IconProps) => (
+  <MdPlayCircleFilled className={className} style={style} />
 );
