@@ -84,8 +84,8 @@ const MediaDetailsPage = () => {
 
   const apiFetch = useApiFetch();
 
-  const getPlexUrl = (serverId: string, ratingKey: string) =>
-    `https://app.plex.tv/web/#!/server/${serverId}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
+  const getPlexUrl = (serverIdValue: string, ratingKey: string) =>
+    `https://app.plex.tv/desktop/#!/server/${serverIdValue}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
 
   const handlePlexButtonClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
