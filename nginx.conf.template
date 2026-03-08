@@ -1,5 +1,6 @@
 server {
     listen 8080;
+    include /etc/nginx/mime.types;
     merge_slashes off;
 
     add_header X-Frame-Options "SAMEORIGIN";
