@@ -1,58 +1,29 @@
-export type MediaVersion = {
-  videoResolution: string;
-  subtitles: string[];
-};
+import { components } from './api-types';
 
-export type ServerAvailability = {
-  serverId: string;
-  serverName: string;
-  ratingKey: string;
-  versions: MediaVersion[];
-};
+export type DbServer = components['schemas']['DbServer'];
+export type SystemInfo = components['schemas']['SystemInfo'];
+export type Library = components['schemas']['Library'];
+export type Item = components['schemas']['Item'];
+export type ItemWithDetails = components['schemas']['ItemWithDetails'];
+export type SearchResult = components['schemas']['SearchResult'];
+export type MediaDetails = components['schemas']['MediaDetails'];
+export type SeasonSummary = components['schemas']['SeasonSummary'];
+export type EpisodeDetails = components['schemas']['EpisodeDetails'];
+export type PlexExtra = components['schemas']['PlexExtra'];
+export type PlayQueueResponse = components['schemas']['PlayQueueResponse'];
 
-export type MediaDetails = {
-  guid: string;
-  title: string;
-  summary?: string;
-  year?: number;
-  artPath?: string;
-  thumbPath?: string;
-  itemType: string;
-  contentRating?: string;
-  duration?: number;
-  originallyAvailableAt?: string;
-  studio?: string;
-  availableOn: ServerAvailability[];
-};
+export interface ImageQuery {
+  width?: number;
+  height?: number;
+}
 
-export type GroupedResult = {
-  guid: string;
-  title: string;
-  year?: number;
-  thumbPath?: string;
-  servers: Array<{ id: string; name: string }>;
-  itemType: 'movie' | 'show';
-  contentRating?: string;
-  duration?: number;
-  originallyAvailableAt?: string;
-};
-
-export type SystemInfo = {
-  lastUpdated: string | null;
-  syncIntervalHours: number;
-  totalMovies: number;
-  totalShows: number;
-  onlineServers: number;
-  offlineServers: number;
-};
-
-export type Server = {
-  id: string;
-  name: string;
-  isOnline: boolean;
-};
-
-export type Library = {
-  key: string;
-  title: string;
-};
+export interface GroupedResult extends Omit<
+  SearchResult,
+  'serverId' | 'serverName' | 'ratingKey'
+> {
+  servers: {
+    id: string;
+    name: string;
+    ratingKey: string;
+  }[];
+}

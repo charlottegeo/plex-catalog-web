@@ -1,2 +1,5 @@
 dist
 coverage
+node_modules
+package-lock.json
+src/api-types.d.ts

@@ -37,6 +37,27 @@ export const formatDate = (dateString?: string): string => {
   });
 };
 
+const EXTRA_TYPE_LABELS: Record<string, string> = {
+  sceneorsample: 'Scene',
+  behindthescenes: 'Behind the Scenes',
+  deletedscene: 'Deleted Scene',
+  deleted: 'Deleted Scene',
+  featurette: 'Featurette',
+  interview: 'Interview',
+  scene: 'Scene',
+  short: 'Short',
+  trailer: 'Trailer',
+  other: 'Other',
+};
+
+export const formatExtraType = (extraType?: string | null): string => {
+  if (!extraType) return '';
+  const key = extraType.toLowerCase().trim();
+  const label = EXTRA_TYPE_LABELS[key];
+  if (label) return label;
+  return extraType.charAt(0).toUpperCase() + extraType.slice(1).toLowerCase();
+};
+
 export const formatRelativeTime = (dateString?: string | null): string => {
   if (!dateString) return 'Never';
   const date = new Date(dateString);
