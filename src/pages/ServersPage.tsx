@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useApiFetch } from '../utils/api';
 import { Alert, Spinner } from 'reactstrap';
-import { Server, Library } from '../types';
+import { DbServer, Library } from '../types';
 import ServerItem from '../components/ServerItem';
 import './ServersPage.css';
 
 const ServersPage = () => {
-  const [servers, setServers] = useState<Server[]>([]);
+  const [servers, setServers] = useState<DbServer[]>([]);
   const [libraries, setLibraries] = useState<Record<string, Library[]>>({});
   const [openServerId, setOpenServerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const ServersPage = () => {
         const response = await apiFetch('/api/servers');
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
-        setServers((await response.json()) as Server[]);
+        setServers((await response.json()) as DbServer[]);
       } catch (e: unknown) {
         setError(
           e instanceof Error ? e.message : 'An error occurred fetching servers'

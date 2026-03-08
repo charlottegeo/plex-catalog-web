@@ -7,11 +7,11 @@ import {
   ListGroup,
   ListGroupItem,
 } from 'reactstrap';
-import { Server, Library } from '../types';
+import { DbServer, Library } from '../types';
 import './ServerItem.css';
 
 interface ServerItemProps {
-  server: Server;
+  server: DbServer;
   libraries: Library[];
   isOpen: boolean;
   onToggle: () => void;
