@@ -10,6 +10,7 @@ export type MediaDetails = components['schemas']['MediaDetails'];
 export type SeasonSummary = components['schemas']['SeasonSummary'];
 export type EpisodeDetails = components['schemas']['EpisodeDetails'];
 export type PlexExtra = components['schemas']['PlexExtra'];
+export type MediaVersion = components['schemas']['MediaVersion'];
 export type PlayQueueResponse = components['schemas']['PlayQueueResponse'];
 
 export interface ImageQuery {

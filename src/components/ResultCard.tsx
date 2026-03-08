@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { SubtitlesIcon } from './icons';
-import { formatResolution, formatDuration } from '../utils/formatting';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { GroupedResult, MediaDetails } from '../types';
 import { useApiFetch } from '../utils/api';
+import { formatDuration, formatResolution } from '../utils/formatting';
+import { SubtitlesIcon } from './icons';
 
 type ResultCardProps = {
   item: GroupedResult;
@@ -150,7 +150,7 @@ const ResultCard = ({
           observer.disconnect();
           try {
             const response = await apiFetch(
-              `/api/media/${encodeURIComponent(item.guid)}`
+              `/api/media/${encodeURIComponent(item.guid ?? '')}`
             );
             if (response.ok) {
               const data = (await response.json()) as MediaDetails;

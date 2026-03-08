@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'reactstrap';
+import ServerExtras from '../components/ServerExtras';
 import { PlayIcon, PlexIcon, SubtitlesIcon } from '../components/icons';
-import { Server } from '../types';
+import { DbServer } from '../types';
 import { useApiFetch } from '../utils/api';
 import {
   formatDate,
   formatDuration,
   formatResolution,
 } from '../utils/formatting';
-import './MediaDetailsPage.css';
 import './SeasonPage.css';
 
 const EpisodeSkeleton = () => (
@@ -63,12 +63,12 @@ const EpisodeCard = ({
   episode,
   serverId,
   index,
-  onThumbnailClick,
+  onPlayClick,
 }: {
   episode: EpisodeDetails;
   serverId: string;
   index: number;
-  onThumbnailClick?: (ratingKey: string, title: string) => void;
+  onPlayClick: (ratingKey: string, title: string) => void;
 }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
@@ -135,34 +135,16 @@ const EpisodeCard = ({
             <div className="episode-thumb-wrapper">
               <div
                 className="episode-thumb-container"
-                role={onThumbnailClick ? 'button' : undefined}
-                tabIndex={onThumbnailClick ? 0 : undefined}
-                onClick={
-                  onThumbnailClick
-                    ? () => onThumbnailClick(episode.id, episode.title)
-                    : undefined
-                }
-                onKeyDown={
-                  onThumbnailClick
-                    ? (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          onThumbnailClick(episode.id, episode.title);
-                        }
-                      }
-                    : undefined
-                }
+                onClick={() => onPlayClick(episode.id, episode.title)}
               >
                 <img
                   src={imageUrl}
                   className="episode-thumb"
                   alt={episode.title}
                 />
-                {onThumbnailClick && (
-                  <div className="episode-thumb-play-overlay">
-                    <PlayIcon className="episode-thumb-play-icon" />
-                  </div>
-                )}
+                <div className="episode-thumb-play-overlay">
+                  <PlayIcon className="episode-thumb-play-icon" />
+                </div>
               </div>
             </div>
           ) : (
@@ -225,7 +207,7 @@ const EpisodeCard = ({
               </button>
             )}
             <div
-              className="version-info d-flex align-items-center"
+              className="version-info d-flex align-items-center mt-2"
               style={{ gap: '8px' }}
             >
               {episode.versions.map((v, i) => (
@@ -242,6 +224,7 @@ const EpisodeCard = ({
                 </>
               )}
             </div>
+            <ServerExtras serverId={serverId} ratingKey={episode.id} />
           </div>
         </div>
       </div>
@@ -280,29 +263,17 @@ const SeasonPage = () => {
     `https://app.plex.tv/desktop/#!/server/${serverIdValue}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
 
   const handlePlexButtonClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
     serverIdValue: string,
     ratingKey: string,
     itemTitle: string
   ) => {
-    e.preventDefault();
-    const url = getPlexUrl(serverIdValue, ratingKey);
-    setPendingPlexUrl(url);
+    setPendingPlexUrl(getPlexUrl(serverIdValue, ratingKey));
     setPendingItemTitle(itemTitle);
     setModalOpen(true);
   };
-
-  const handleEpisodeThumbnailClick = (ratingKey: string, title: string) => {
-    if (!serverId) return;
-    const url = getPlexUrl(serverId, ratingKey);
-    setPendingPlexUrl(url);
-    setPendingItemTitle(title);
-    setModalOpen(true);
-  };
-
   const confirmPlexOpen = () => {
     if (pendingPlexUrl) {
-      window.open(pendingPlexUrl, '_blank', 'noopener,noreferrer');
+      window.open(pendingPlexUrl, '_blank', 'noopener');
       setModalOpen(false);
       setPendingPlexUrl(null);
       setPendingItemTitle(null);
@@ -333,7 +304,7 @@ const SeasonPage = () => {
       try {
         const response = await apiFetch('/api/servers');
         if (response.ok) {
-          const servers = (await response.json()) as Server[];
+          const servers = (await response.json()) as DbServer[];
           const server = servers.find((s) => s.id === serverId);
           if (server) {
             setServerName(server.name);
@@ -446,11 +417,9 @@ const SeasonPage = () => {
                 {isHiddenSeason ? show?.title : season?.title || 'Season'}
               </h1>
               {serverId && seasonId && (
-                <a
-                  href={getPlexUrl(serverId, seasonId)}
-                  onClick={(e) =>
+                <button
+                  onClick={() =>
                     handlePlexButtonClick(
-                      e,
                       serverId,
                       seasonId,
                       isHiddenSeason
@@ -458,12 +427,10 @@ const SeasonPage = () => {
                         : (season?.title ?? '')
                     )
                   }
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="btn btn-warning btn-sm plex-open-button"
                 >
-                  <PlexIcon /> Open
-                </a>
+                  <PlexIcon className="mr-1" /> Open
+                </button>
               )}
             </div>
             <div className="summary-wrapper">
@@ -491,6 +458,10 @@ const SeasonPage = () => {
                 </button>
               )}
             </div>
+
+            {serverId && seasonId && (
+              <ServerExtras serverId={serverId} ratingKey={seasonId} />
+            )}
           </div>
         </div>
       </div>
@@ -508,7 +479,9 @@ const SeasonPage = () => {
                   episode={episode}
                   serverId={serverId!}
                   index={idx + 1}
-                  onThumbnailClick={handleEpisodeThumbnailClick}
+                  onPlayClick={(ratingKey, title) =>
+                    handlePlexButtonClick(serverId!, ratingKey, title)
+                  }
                 />
               ))}
         </div>
@@ -521,7 +494,9 @@ const SeasonPage = () => {
         <ModalBody>
           <div className="text-center">
             <p className="mb-0">
-              This will open{' '}
+              {pendingPlexUrl?.startsWith('plex://')
+                ? 'This will attempt to instantly play '
+                : 'This will open '}
               <strong>
                 {pendingItemTitle ??
                   (isHiddenSeason ? show?.title : season?.title)}
@@ -532,12 +507,15 @@ const SeasonPage = () => {
                   <strong>{serverName}</strong>
                 </>
               )}
-              {' in a new tab.'}
+              {pendingPlexUrl?.startsWith('plex://')
+                ? ' using the native Plex app.'
+                : ' in a new tab.'}
             </p>
 
-            <p className="mb-0">
-              You must be logged into the CSH Plex account for this link to
-              work.
+            <p className="mb-0 mt-2 text-muted small">
+              {pendingPlexUrl?.startsWith('plex://')
+                ? 'Note: You must have the Plex Desktop or Mobile app installed for auto-play.'
+                : 'You must be logged into the CSH Plex account for this link to work.'}
             </p>
           </div>
         </ModalBody>

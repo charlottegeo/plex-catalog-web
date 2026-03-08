@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useApiFetch } from '../utils/api';
 import { SystemInfo } from '../types';
+import { useApiFetch } from '../utils/api';
 import { formatRelativeTime } from '../utils/formatting';
+import './Footer.css';
 
 export default function Footer() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
@@ -51,17 +52,26 @@ export default function Footer() {
                 </div>
 
                 <div className="text-center text-md-end">
-                  <span>
-                    Last updated:{' '}
-                    <strong>
-                      {formatRelativeTime(systemInfo.lastUpdated)}
-                    </strong>
-                  </span>
+                  {systemInfo.syncInProgress ? (
+                    <span className="sync-indicator">
+                      <span className="sync-indicator__dot" />
+                      <span className="sync-indicator__dot" />
+                      <span className="sync-indicator__dot" />
+                      Syncing database
+                    </span>
+                  ) : (
+                    <span>
+                      Last updated:{' '}
+                      <strong>
+                        {formatRelativeTime(systemInfo.lastUpdated)}
+                      </strong>
+                    </span>
+                  )}
                   <span className="mx-2 d-none d-md-inline text-opacity-25">
                     |
                   </span>
                   <span className="d-block d-md-inline">
-                    Syncs every {systemInfo.syncIntervalHours} hours
+                    Syncs every {systemInfo.syncIntervalMinutes} minutes
                   </span>
                 </div>
               </div>

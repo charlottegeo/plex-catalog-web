@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
-import { GroupedResult } from '../types';
-import ResultCardSkeleton from '../components/ResultCardSkeleton';
-import LibraryResultCard from '../components/LibraryResultCard';
-import { useApiFetch } from '../utils/api';
-import { SortAscIcon, SortDescIcon } from '../components/icons';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Collapse, FormGroup, Label } from 'reactstrap';
+import { SortAscIcon, SortDescIcon } from '../components/icons';
+import LibraryResultCard from '../components/LibraryResultCard';
+import ResultCardSkeleton from '../components/ResultCardSkeleton';
+import { GroupedResult } from '../types';
+import { useApiFetch } from '../utils/api';
 import './Home.css';
 
 type LibraryItem = {
@@ -17,6 +17,7 @@ type LibraryItem = {
   type: 'movie' | 'show';
   originallyAvailableAt?: string;
   duration?: number;
+  ratingKey: string;
 };
 
 type SortField = 'title' | 'year' | 'date' | 'duration';
@@ -69,7 +70,13 @@ const LibraryPage = () => {
           thumbPath: item.thumb,
           originallyAvailableAt: item.originallyAvailableAt,
           duration: item.duration,
-          servers: [{ id: serverId!, name: decodeURIComponent(serverName!) }],
+          servers: [
+            {
+              id: serverId!,
+              name: decodeURIComponent(serverName!),
+              ratingKey: item.ratingKey,
+            },
+          ],
         }));
 
         setItems(groupedResults);

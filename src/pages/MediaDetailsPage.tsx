@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'reactstrap';
 import { PlexIcon, SubtitlesIcon } from '../components/icons';
+import ServerExtras from '../components/ServerExtras';
 import TVShowSeasons from '../components/TVShowSeasons';
 import { useApiFetch } from '../utils/api';
 import { formatDuration, formatResolution } from '../utils/formatting';
@@ -79,6 +80,7 @@ const MediaDetailsPage = () => {
   const [pendingServerName, setPendingServerName] = useState<string | null>(
     null
   );
+  const [pendingItemTitle, setPendingItemTitle] = useState<string | null>(null);
   const [seasonCounts, setSeasonCounts] = useState<Record<string, number>>({});
   const summaryRef = useRef<HTMLParagraphElement>(null);
 
@@ -87,25 +89,36 @@ const MediaDetailsPage = () => {
   const getPlexUrl = (serverIdValue: string, ratingKey: string) =>
     `https://app.plex.tv/desktop/#!/server/${serverIdValue}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
 
-  const handlePlexButtonClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
+  const showPlexOpenModal = (
     serverId: string,
     ratingKey: string,
-    serverName: string
+    serverName: string,
+    itemTitle: string
+  ) => {
+    setPendingPlexUrl(getPlexUrl(serverId, ratingKey));
+    setPendingServerName(serverName);
+    setPendingItemTitle(itemTitle);
+    setModalOpen(true);
+  };
+
+  const handlePlexButtonClick = (
+    e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>,
+    serverId: string,
+    ratingKey: string,
+    serverName: string,
+    itemTitle: string
   ) => {
     e.preventDefault();
-    const url = getPlexUrl(serverId, ratingKey);
-    setPendingPlexUrl(url);
-    setPendingServerName(serverName);
-    setModalOpen(true);
+    showPlexOpenModal(serverId, ratingKey, serverName, itemTitle);
   };
 
   const confirmPlexOpen = () => {
     if (pendingPlexUrl) {
-      window.open(pendingPlexUrl, '_blank', 'noopener,noreferrer');
+      window.open(pendingPlexUrl, '_blank', 'noopener');
       setModalOpen(false);
       setPendingPlexUrl(null);
       setPendingServerName(null);
+      setPendingItemTitle(null);
     }
   };
 
@@ -313,6 +326,7 @@ const MediaDetailsPage = () => {
                   </button>
                 )}
               </div>
+
               <div className="mt-4">
                 <button
                   onClick={() => {
@@ -377,14 +391,19 @@ const MediaDetailsPage = () => {
                             e,
                             server.serverId,
                             server.ratingKey,
-                            server.serverName
+                            server.serverName,
+                            details.title ?? ''
                           )
                         }
-                        className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
+                        className="btn btn-warning btn-sm d-flex align-items-center plex-open-button"
                       >
-                        <PlexIcon /> Open
+                        <PlexIcon className="mr-1" /> Open
                       </a>
                     </div>
+                    <ServerExtras
+                      serverId={server.serverId}
+                      ratingKey={server.ratingKey}
+                    />
                   </div>
                 );
               })}
@@ -415,12 +434,13 @@ const MediaDetailsPage = () => {
                           e,
                           server.serverId,
                           server.ratingKey,
-                          server.serverName
+                          server.serverName,
+                          details.title ?? ''
                         )
                       }
                       className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
                     >
-                      <PlexIcon /> Open
+                      <PlexIcon className="mr-1" /> Open
                     </a>
                   </div>
                   <div className="source-seasons-container">
@@ -431,6 +451,10 @@ const MediaDetailsPage = () => {
                       showTitle={details.title}
                     />
                   </div>
+                  <ServerExtras
+                    serverId={server.serverId}
+                    ratingKey={server.ratingKey}
+                  />
                 </div>
               ))}
             </div>
@@ -445,7 +469,8 @@ const MediaDetailsPage = () => {
         <ModalBody>
           <div className="text-center">
             <p className="mb-0">
-              This will open <strong>{details.title}</strong>
+              This will open{' '}
+              <strong>{pendingItemTitle || details?.title}</strong>
               {pendingServerName && (
                 <>
                   {' on '}
@@ -455,7 +480,7 @@ const MediaDetailsPage = () => {
               {' in a new tab.'}
             </p>
 
-            <p className="mb-0">
+            <p className="mb-0 mt-2 text-muted small">
               You must be logged into the CSH Plex account for this link to
               work.
             </p>

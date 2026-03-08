@@ -1,23 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useApiFetch } from '../utils/api';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Alert, FormGroup, Label, Collapse } from 'reactstrap';
+import { Alert, Collapse, FormGroup, Label } from 'reactstrap';
 import ResultCard from '../components/ResultCard';
-import { GroupedResult, SystemInfo } from '../types';
 import ResultCardSkeleton from '../components/ResultCardSkeleton';
-import { SortAscIcon, SortDescIcon, FilmReelIcon } from '../components/icons';
-import './Home.css';
-
-type SearchResult = {
-  guid: string;
-  title: string;
-  year?: number;
-  originallyAvailableAt?: string;
-  thumbPath?: string;
-  serverId: string;
-  serverName: string;
-  itemType: 'movie' | 'show';
-};
+import { FilmReelIcon, SortAscIcon, SortDescIcon } from '../components/icons';
+import { GroupedResult, SystemInfo, SearchResult } from '../types';
+import { useApiFetch } from '../utils/api';
 
 type FilterType = 'all' | 'movie' | 'show';
 
@@ -184,20 +172,27 @@ const Home = () => {
           if (grouped.has(item.guid)) {
             const existing = grouped.get(item.guid)!;
             const serverExists = existing.servers.some(
-              (s) => s.id === item.serverId
+              (s: { id: string }) => s.id === item.serverId
             );
             if (!serverExists) {
               existing.servers.push({
                 id: item.serverId,
                 name: item.serverName,
+                ratingKey: item.ratingKey,
               });
             }
           } else {
-            const { serverId, serverName, itemType, ...rest } = item;
+            const { serverId, serverName, ratingKey, itemType, ...rest } = item;
             grouped.set(item.guid, {
               ...rest,
               itemType,
-              servers: [{ id: serverId, name: serverName }],
+              servers: [
+                {
+                  id: serverId,
+                  name: serverName,
+                  ratingKey: ratingKey,
+                },
+              ],
             });
           }
         }
