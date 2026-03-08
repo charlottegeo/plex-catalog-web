@@ -1,0 +1,8 @@
+allowBuilds:
+  '@axa-fr/oidc-client': true
+  '@axa-fr/react-oidc': true
+  '@parcel/watcher': false
+  '@swc/core': true
+  core-js: true
+  es5-ext: true
+  esbuild: true
