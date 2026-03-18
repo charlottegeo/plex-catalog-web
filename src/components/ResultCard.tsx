@@ -133,11 +133,12 @@ const ResultCard = ({
 }: ResultCardProps) => {
   const [mediaDetails, setMediaDetails] = useState<MediaDetails | null>(null);
   const [fetchedImageUrl, setFetchedImageUrl] = useState<string | null>(null);
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const itemType = getItemType(item);
   const isGrouped = isGroupedResult(item);
   const isSingleServer = isGrouped && item.servers.length === 1;
-  const imageUrl = imageUrlProp ?? fetchedImageUrl;
+  const imageUrl = resolvedImageUrl ?? fetchedImageUrl;
 
   const apiFetch = useApiFetch();
 
@@ -195,6 +196,37 @@ const ResultCard = ({
     observer.observe(cardRef.current);
     return () => observer.disconnect();
   }, [isGrouped, itemKey, itemType, apiFetch]);
+
+  useEffect(() => {
+    if (imageUrlProp == null) {
+      setResolvedImageUrl(null);
+      return;
+    }
+
+    if (!imageUrlProp.startsWith('/api/')) {
+      setResolvedImageUrl(imageUrlProp);
+      return;
+    }
+
+    let objectUrl: string | null = null;
+    const fetchProxiedImage = async () => {
+      try {
+        const response = await apiFetch(imageUrlProp);
+        if (!response.ok) return;
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+        setResolvedImageUrl(objectUrl);
+      } catch (error) {
+        console.error('Failed to fetch proxied image', error);
+      }
+    };
+
+    fetchProxiedImage();
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [imageUrlProp, apiFetch]);
 
   useEffect(() => {
     if (imageUrlProp != null) return;

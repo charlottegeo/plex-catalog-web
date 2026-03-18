@@ -528,15 +528,18 @@ const Home = () => {
               ) : (
                 <div className="results-grid">
                   {sortedFilteredDiscoverResults.map((item) => {
-                    const thumbUrl = item.thumb?.startsWith('/')
+                    const plexThumbUrl = item.thumb?.startsWith('/')
                       ? `https://metadata.provider.plex.tv${item.thumb}`
                       : item.thumb;
+                    const thumbUrl = plexThumbUrl
+                      ? `/api/image/global?url=${encodeURIComponent(plexThumbUrl)}`
+                      : undefined;
                     return (
                       <div key={item.ratingKey} className="result-link">
                         <ResultCard
                           item={item}
                           hideTypeTag={filterType !== 'all'}
-                          imageUrl={thumbUrl ?? undefined}
+                          imageUrl={thumbUrl}
                           actionElement={
                             <Button
                               color="primary"

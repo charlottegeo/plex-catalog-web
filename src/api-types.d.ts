@@ -509,6 +509,10 @@ export interface components {
             title: string;
         };
         SearchQuery: {
+            /** Format: int32 */
+            limit?: number | null;
+            /** Format: int32 */
+            offset?: number | null;
             q: string;
         };
         SearchResult: {
@@ -586,6 +590,10 @@ export interface operations {
             query: {
                 /** @description Search query */
                 q: string;
+                /** @description Max results to return */
+                limit?: number | null;
+                /** @description Result offset (for pagination/infinite scroll) */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -749,6 +757,10 @@ export interface operations {
             query: {
                 /** @description Search terms (full-text; multiple words supported) */
                 q: string;
+                /** @description Max results to return */
+                limit?: number | null;
+                /** @description Result offset (for pagination/infinite scroll) */
+                offset?: number | null;
             };
             header?: never;
             path?: never;

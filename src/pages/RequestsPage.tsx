@@ -25,6 +25,58 @@ function formatRequestedBy(username: string): string {
   return `${truncated} +${remaining}`;
 }
 
+type RequestThumbnailProps = {
+  src: string;
+  alt: string;
+};
+
+function RequestThumbnail({ src, alt }: RequestThumbnailProps) {
+  const apiFetch = useApiFetch();
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!src.startsWith('/api/')) {
+      setResolvedSrc(src);
+      return;
+    }
+
+    let objectUrl: string | null = null;
+
+    const fetchImage = async () => {
+      try {
+        const response = await apiFetch(src);
+        if (!response.ok) return;
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+        setResolvedSrc(objectUrl);
+      } catch (error) {
+        console.error('Failed to fetch request thumbnail', error);
+      }
+    };
+
+    fetchImage();
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src, apiFetch]);
+
+  if (!resolvedSrc) return null;
+
+  return (
+    <img
+      src={resolvedSrc}
+      alt={alt}
+      className="card-img-top"
+      style={{
+        aspectRatio: '2/3',
+        objectFit: 'cover',
+        width: '100%',
+      }}
+    />
+  );
+}
+
 const RequestsPage = () => {
   const [requests, setRequests] = useState<MediaRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,9 +215,12 @@ const RequestsPage = () => {
       ) : (
         <div className="results-grid">
           {filteredRequests.map((request) => {
-            const thumbUrl = request.thumb?.startsWith('/')
+            const plexThumbUrl = request.thumb?.startsWith('/')
               ? `https://metadata.provider.plex.tv${request.thumb}`
               : (request.thumb ?? undefined);
+            const thumbUrl = plexThumbUrl
+              ? `/api/image/global?url=${encodeURIComponent(plexThumbUrl)}`
+              : undefined;
             const isOwnRequest = request.username === currentUsername;
             const alreadySubscribed = userHasPendingForGuid(request.guid);
             const isFulfilled = request.status.toLowerCase() === 'fulfilled';
@@ -174,16 +229,16 @@ const RequestsPage = () => {
             const cardContent = (
               <>
                 {request.thumb ? (
-                  <img
-                    src={thumbUrl}
-                    alt={request.title}
-                    className="card-img-top"
-                    style={{
-                      aspectRatio: '2/3',
-                      objectFit: 'cover',
-                      width: '100%',
-                    }}
-                  />
+                  thumbUrl ? (
+                    <RequestThumbnail src={thumbUrl} alt={request.title} />
+                  ) : (
+                    <div
+                      className="card-img-top bg-secondary d-flex align-items-center justify-content-center text-white"
+                      style={{ aspectRatio: '2/3', minHeight: 140 }}
+                    >
+                      {request.itemType === 'movie' ? 'Movie' : 'Show'}
+                    </div>
+                  )
                 ) : (
                   <div
                     className="card-img-top bg-secondary d-flex align-items-center justify-content-center text-white"
