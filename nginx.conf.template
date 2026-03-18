@@ -7,7 +7,7 @@ server {
     add_header X-XSS-Protection "1; mode=block";
     add_header X-Content-Type-Options "nosniff";
     add_header Referrer-Policy "strict-origin-when-cross-origin";
-    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https://profiles.csh.rit.edu; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' blob: https://sso.csh.rit.edu;";
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https://profiles.csh.rit.edu https://metadata-static.plex.tv https://metadata.provider.plex.tv https://image.tmdb.org https://m.media-amazon.com https://artworks.thetvdb.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' blob: https://sso.csh.rit.edu;";
 
     location / {
         root /usr/share/nginx/html;

@@ -2,6 +2,11 @@ import { useMemo } from 'react';
 import { components } from '../api-types';
 import { apiPrefix, SSOEnabled } from '../configuration';
 import { getUseOidcAccessToken } from '../SSODisabledDefaults';
+import type {
+  DiscoverResult,
+  MediaRequest,
+  MediaRequestPayload,
+} from '../types';
 
 type ApiFetch = (
   input: RequestInfo | URL,
@@ -66,20 +71,64 @@ export const fetchExtras = async (
   return await response.json();
 };
 
-export const createPlayQueue = async (
+export const searchDiscover = async (
   apiFetch: ApiFetch,
-  serverId: string,
-  ratingKey: string
-): Promise<components['schemas']['PlayQueueResponse']> => {
+  query: string
+): Promise<DiscoverResult[]> => {
   const response = await apiFetch(
-    `/api/servers/${serverId}/play/${ratingKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'X-Plex-Client-Identifier': getClientIdentifier(),
-      },
-    }
+    `/api/discover?q=${encodeURIComponent(query)}`
   );
-  if (!response.ok) throw new Error('Failed to create play queue');
-  return await response.json();
+  if (!response.ok) return [];
+  const data = await response.json();
+  return (
+    (data as { MediaContainer?: { Metadata?: DiscoverResult[] } })
+      ?.MediaContainer?.Metadata ?? []
+  );
+};
+
+export const submitMediaRequest = async (
+  apiFetch: ApiFetch,
+  payload: MediaRequestPayload
+) => {
+  const response = await apiFetch('/api/requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error('Failed to submit request');
+  return response.json();
+};
+
+export const fetchMediaRequests = async (
+  apiFetch: ApiFetch
+): Promise<MediaRequest[]> => {
+  const response = await apiFetch('/api/requests');
+  if (!response.ok) throw new Error('Failed to fetch requests');
+  return response.json();
+};
+
+export const deleteMediaRequest = async (
+  apiFetch: ApiFetch,
+  id: number
+): Promise<string> => {
+  const response = await apiFetch(`/api/requests/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete request');
+  return response.text();
+};
+
+export const fetchNotificationCount = async (
+  apiFetch: ApiFetch
+): Promise<number> => {
+  const response = await apiFetch('/api/requests/notifications/count');
+  if (!response.ok) return 0;
+  const data = await response.json();
+  return (data as { count?: number }).count ?? 0;
+};
+
+export const clearNotifications = async (apiFetch: ApiFetch): Promise<void> => {
+  await apiFetch('/api/requests/notifications/clear', {
+    method: 'POST',
+  });
 };

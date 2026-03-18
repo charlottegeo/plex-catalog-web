@@ -1,6 +1,8 @@
 import { components } from './api-types';
 
 export type DbServer = components['schemas']['DbServer'];
+export type MediaRequestPayload = components['schemas']['MediaRequestPayload'];
+export type MediaRequest = components['schemas']['MediaRequest'];
 export type SystemInfo = components['schemas']['SystemInfo'];
 export type Library = components['schemas']['Library'];
 export type Item = components['schemas']['Item'];
@@ -11,11 +13,23 @@ export type SeasonSummary = components['schemas']['SeasonSummary'];
 export type EpisodeDetails = components['schemas']['EpisodeDetails'];
 export type PlexExtra = components['schemas']['PlexExtra'];
 export type MediaVersion = components['schemas']['MediaVersion'];
-export type PlayQueueResponse = components['schemas']['PlayQueueResponse'];
 
 export interface ImageQuery {
   width?: number;
   height?: number;
+}
+
+export interface DiscoverResult {
+  ratingKey: string;
+  title: string;
+  type: string;
+  summary?: string;
+  year?: number;
+  thumb?: string;
+  duration?: number;
+  childCount?: number;
+  contentRating?: string;
+  originallyAvailableAt?: string;
 }
 
 export interface GroupedResult extends Omit<

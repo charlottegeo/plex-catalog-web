@@ -1,13 +1,14 @@
 import 'csh-material-bootstrap/dist/csh-material-bootstrap.css';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { useState } from 'react';
-import Home from './pages/Home';
-import MediaDetailsPage from './pages/MediaDetailsPage';
-import SeasonPage from './pages/SeasonPage';
-import LibraryPage from './pages/LibraryPage';
-import ServersPage from './pages/ServersPage';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import PageContainer from './containers/PageContainer';
+import Home from './pages/Home';
+import LibraryPage from './pages/LibraryPage';
+import MediaDetailsPage from './pages/MediaDetailsPage';
 import NotFound from './pages/NotFound';
+import RequestsPage from './pages/RequestsPage';
+import SeasonPage from './pages/SeasonPage';
+import ServersPage from './pages/ServersPage';
 
 type Props = {
   rerouteHomeOn404?: boolean;
@@ -27,6 +28,7 @@ function AppContent({ rerouteHomeOn404 = undefined }: Props) {
       <div style={{ padding: '1rem' }}>
         <Routes>
           <Route path="/" element={<Home key={resetHomeKey} />} />
+          <Route path="/requests" element={<RequestsPage />} />
           <Route path="/servers" element={<ServersPage />} />
           <Route path="/media/*" element={<MediaDetailsPage />} />
           <Route

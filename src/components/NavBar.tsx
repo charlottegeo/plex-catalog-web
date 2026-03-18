@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import {
   Collapse,
   Container,
@@ -7,7 +8,7 @@ import {
   NavbarToggler,
   NavItem,
 } from 'reactstrap';
-import { NavLink } from 'react-router-dom';
+import { fetchNotificationCount, useApiFetch } from '../utils/api';
 import Profile from './Profile';
 
 type NavBarProps = {
@@ -15,7 +16,23 @@ type NavBarProps = {
 };
 
 const NavBar: React.FunctionComponent<NavBarProps> = ({ onHomeClick }) => {
-  const [isOpen, setIsOpen] = React.useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const apiFetch = useApiFetch();
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const count = await fetchNotificationCount(apiFetch);
+        setUnreadCount(count);
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 60000);
+    return () => clearInterval(interval);
+  }, [apiFetch]);
 
   const toggle = () => {
     setIsOpen(!isOpen);
@@ -43,6 +60,26 @@ const NavBar: React.FunctionComponent<NavBarProps> = ({ onHomeClick }) => {
               <NavItem>
                 <NavLink to="/servers" className="nav-link">
                   Servers
+                </NavLink>
+              </NavItem>
+              <NavItem>
+                <NavLink
+                  to="/requests"
+                  className="nav-link d-flex align-items-center"
+                >
+                  Requests
+                  {unreadCount > 0 && (
+                    <span
+                      className="badge badge-danger rounded-circle ml-2"
+                      style={{
+                        width: '10px',
+                        height: '10px',
+                        padding: 0,
+                        display: 'inline-block',
+                      }}
+                      title={`${unreadCount} fulfilled requests`}
+                    />
+                  )}
                 </NavLink>
               </NavItem>
               {

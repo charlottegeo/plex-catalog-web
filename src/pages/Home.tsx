@@ -1,11 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Alert, Collapse, FormGroup, Label } from 'reactstrap';
+import {
+  Alert,
+  Button,
+  Collapse,
+  FormGroup,
+  Label,
+  Nav,
+  NavItem,
+  NavLink,
+} from 'reactstrap';
+import RequestModal from '../components/RequestModal';
 import ResultCard from '../components/ResultCard';
 import ResultCardSkeleton from '../components/ResultCardSkeleton';
 import { FilmReelIcon, SortAscIcon, SortDescIcon } from '../components/icons';
-import { GroupedResult, SystemInfo, SearchResult } from '../types';
-import { useApiFetch } from '../utils/api';
+import {
+  DiscoverResult,
+  GroupedResult,
+  SearchResult,
+  SystemInfo,
+} from '../types';
+import { searchDiscover, useApiFetch } from '../utils/api';
 
 type FilterType = 'all' | 'movie' | 'show';
 
@@ -27,6 +42,11 @@ const Home = () => {
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [discoverResults, setDiscoverResults] = useState<DiscoverResult[]>([]);
+  const [isDiscoverLoading, setIsDiscoverLoading] = useState(false);
+  const [requestModalItem, setRequestModalItem] =
+    useState<DiscoverResult | null>(null);
+  const [activeTab, setActiveTab] = useState<'local' | 'discover'>('local');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const apiFetch = useApiFetch();
 
@@ -124,15 +144,67 @@ const Home = () => {
     return displayedResults.slice(startIndex, startIndex + itemsPerPage);
   }, [currentPage, displayedResults]);
 
-  const availableContentRatings = useMemo(() => {
-    return [
-      ...new Set(
-        allResults
-          .map((item) => item.contentRating)
-          .filter((rating): rating is string => !!rating)
-      ),
-    ].sort();
+  const localGuids = useMemo(() => {
+    const guids = new Set<string>();
+    allResults.forEach((r) => {
+      if (r.guid) {
+        const parts = r.guid.split('/');
+        guids.add(parts[parts.length - 1]);
+      }
+    });
+    return guids;
   }, [allResults]);
+
+  const filteredDiscoverResults = useMemo(() => {
+    return discoverResults
+      .filter((d) => {
+        if (filterType !== 'all' && d.type !== filterType) return false;
+        if (contentRatingFilter !== 'all') {
+          if (d.contentRating !== contentRatingFilter) return false;
+        }
+        return true;
+      })
+      .filter((d) => {
+        const guid = (d as { guid?: string }).guid || '';
+        const parts = guid.split('/');
+        const dGuidId = parts[parts.length - 1];
+        return !localGuids.has(dGuidId) && !localGuids.has(d.ratingKey);
+      });
+  }, [discoverResults, localGuids, filterType, contentRatingFilter]);
+
+  const sortedFilteredDiscoverResults = useMemo(() => {
+    return [...filteredDiscoverResults].sort((a, b) => {
+      let result = 0;
+      switch (sortField) {
+        case 'title':
+          result = a.title.localeCompare(b.title);
+          break;
+        case 'year':
+          result = (a.year ?? 0) - (b.year ?? 0);
+          break;
+        case 'date': {
+          const aDate = a.originallyAvailableAt || `${a.year ?? 0}-01-01`;
+          const bDate = b.originallyAvailableAt || `${b.year ?? 0}-01-01`;
+          result = aDate.localeCompare(bDate);
+          break;
+        }
+        case 'duration':
+          result = (a.duration ?? 0) - (b.duration ?? 0);
+          break;
+      }
+      return sortDirection === 'asc' ? result : -result;
+    });
+  }, [filteredDiscoverResults, sortField, sortDirection]);
+
+  const availableContentRatings = useMemo(() => {
+    const localRatings = allResults
+      .map((item) => item.contentRating)
+      .filter((rating): rating is string => !!rating);
+    const discoverRatings = discoverResults
+      .map((d) => d.contentRating)
+      .filter((rating): rating is string => !!rating);
+    return [...new Set([...localRatings, ...discoverRatings])].sort();
+  }, [allResults, discoverResults]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -150,6 +222,7 @@ const Home = () => {
       if (!debouncedQuery.trim()) {
         if (hasSearched) {
           setAllResults([]);
+          setDiscoverResults([]);
           sessionStorage.removeItem('lastSearchResults');
           sessionStorage.removeItem('lastSearchQuery');
           setHasSearched(false);
@@ -157,15 +230,17 @@ const Home = () => {
         return;
       }
       setLoading(true);
+      setIsDiscoverLoading(true);
       setError(null);
       setHasSearched(true);
       try {
-        const response = await apiFetch(
-          `/api/search?q=${encodeURIComponent(debouncedQuery)}`
-        );
-        if (!response.ok)
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        const data = (await response.json()) as SearchResult[];
+        const [searchResponse, discoverData] = await Promise.all([
+          apiFetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`),
+          searchDiscover(apiFetch, debouncedQuery),
+        ]);
+        if (!searchResponse.ok)
+          throw new Error(`HTTP error! Status: ${searchResponse.status}`);
+        const data = (await searchResponse.json()) as SearchResult[];
         const grouped = new Map<string, GroupedResult>();
         for (const item of data) {
           if (!item.guid) continue;
@@ -198,6 +273,7 @@ const Home = () => {
         }
         const finalResults = Array.from(grouped.values());
         setAllResults(finalResults);
+        setDiscoverResults(discoverData);
         sessionStorage.setItem(
           'lastSearchResults',
           JSON.stringify(finalResults)
@@ -207,6 +283,7 @@ const Home = () => {
         setError(e instanceof Error ? e.message : 'An unknown error occurred');
       } finally {
         setLoading(false);
+        setIsDiscoverLoading(false);
       }
     };
 
@@ -341,14 +418,6 @@ const Home = () => {
         </div>
 
         <div className="col-12 col-lg-9">
-          {hasSearched && !loading && displayedResults.length > 0 && (
-            <div className="results-count-header">
-              <p className="text-muted mb-3 mb-lg-0">
-                {displayedResults.length}{' '}
-                {displayedResults.length === 1 ? 'result' : 'results'}
-              </p>
-            </div>
-          )}
           {!hasSearched && (
             <div className="empty-state-section">
               <FilmReelIcon className="empty-state-ghost-icon" />
@@ -362,81 +431,153 @@ const Home = () => {
               </div>
             </div>
           )}
-          {hasSearched && !loading && displayedResults.length === 0 && (
-            <div className="empty-state-section title-not-found-section">
-              <FilmReelIcon className="empty-state-ghost-icon" />
-              <div className="empty-state-content">
-                <h2 className="empty-state-headline">Title Not Found</h2>
-                <p className="empty-state-subtext small text-uppercase text-muted">
-                  We couldn't find any results for &quot;{debouncedQuery}&quot;.
-                </p>
+          {hasSearched && debouncedQuery.trim() && (
+            <>
+              <Nav pills className="mb-3">
+                <NavItem>
+                  <NavLink
+                    className={activeTab === 'local' ? 'active' : ''}
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveTab('local');
+                    }}
+                  >
+                    Available Now ({displayedResults.length})
+                  </NavLink>
+                </NavItem>
+                <NavItem>
+                  <NavLink
+                    className={activeTab === 'discover' ? 'active' : ''}
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveTab('discover');
+                    }}
+                  >
+                    Request New ({filteredDiscoverResults.length})
+                  </NavLink>
+                </NavItem>
+              </Nav>
+
+              {loading || isDiscoverLoading ? (
+                <div className="results-grid">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <ResultCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : activeTab === 'local' ? (
+                <>
+                  <div className="results-grid">
+                    {paginatedResults.map((item) => (
+                      <Link
+                        to={`/media/${item.guid}`}
+                        key={item.guid}
+                        className="result-link"
+                      >
+                        <ResultCard
+                          item={item}
+                          hideTypeTag={filterType !== 'all'}
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                  {totalPages > 1 && (
+                    <nav className="d-flex justify-content-center mt-5 mb-5">
+                      <ul className="pagination shadow-sm">
+                        <li
+                          className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}
+                        >
+                          <a
+                            className="page-link"
+                            href="#"
+                            onClick={(e) => handlePageClick(e, currentPage - 1)}
+                          >
+                            &laquo;
+                          </a>
+                        </li>
+                        {[...Array(totalPages)].map((_, i) => (
+                          <li
+                            key={i}
+                            className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
+                          >
+                            <a
+                              className="page-link"
+                              href="#"
+                              onClick={(e) => handlePageClick(e, i + 1)}
+                            >
+                              {i + 1}
+                            </a>
+                          </li>
+                        ))}
+                        <li
+                          className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
+                        >
+                          <a
+                            className="page-link"
+                            href="#"
+                            onClick={(e) => handlePageClick(e, currentPage + 1)}
+                          >
+                            &raquo;
+                          </a>
+                        </li>
+                      </ul>
+                    </nav>
+                  )}
+                </>
+              ) : (
+                <div className="results-grid">
+                  {sortedFilteredDiscoverResults.map((item) => {
+                    const thumbUrl = item.thumb?.startsWith('/')
+                      ? `https://metadata.provider.plex.tv${item.thumb}`
+                      : item.thumb;
+                    return (
+                      <div key={item.ratingKey} className="result-link">
+                        <ResultCard
+                          item={item}
+                          hideTypeTag={filterType !== 'all'}
+                          imageUrl={thumbUrl ?? undefined}
+                          actionElement={
+                            <Button
+                              color="primary"
+                              className="w-100"
+                              onClick={() => setRequestModalItem(item)}
+                            >
+                              Request
+                            </Button>
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+          {hasSearched &&
+            !loading &&
+            !isDiscoverLoading &&
+            displayedResults.length === 0 &&
+            filteredDiscoverResults.length === 0 && (
+              <div className="empty-state-section title-not-found-section">
+                <FilmReelIcon className="empty-state-ghost-icon" />
+                <div className="empty-state-content">
+                  <h2 className="empty-state-headline">Title Not Found</h2>
+                  <p className="empty-state-subtext small text-uppercase text-muted">
+                    We couldn&apos;t find any results for &quot;
+                    {debouncedQuery}&quot;.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-
-          <div className="results-grid">
-            {loading
-              ? Array.from({ length: 12 }).map((_, i) => (
-                  <ResultCardSkeleton key={i} />
-                ))
-              : paginatedResults.map((item) => (
-                  <Link
-                    to={`/media/${item.guid}`}
-                    key={item.guid}
-                    className="result-link"
-                  >
-                    <ResultCard
-                      item={item}
-                      hideTypeTag={filterType !== 'all'}
-                    />
-                  </Link>
-                ))}
-          </div>
-
-          {!loading && totalPages > 1 && (
-            <nav className="d-flex justify-content-center mt-5 mb-5">
-              <ul className="pagination shadow-sm">
-                <li
-                  className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}
-                >
-                  <a
-                    className="page-link"
-                    href="#"
-                    onClick={(e) => handlePageClick(e, currentPage - 1)}
-                  >
-                    &laquo;
-                  </a>
-                </li>
-                {[...Array(totalPages)].map((_, i) => (
-                  <li
-                    key={i}
-                    className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
-                  >
-                    <a
-                      className="page-link"
-                      href="#"
-                      onClick={(e) => handlePageClick(e, i + 1)}
-                    >
-                      {i + 1}
-                    </a>
-                  </li>
-                ))}
-                <li
-                  className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
-                >
-                  <a
-                    className="page-link"
-                    href="#"
-                    onClick={(e) => handlePageClick(e, currentPage + 1)}
-                  >
-                    &raquo;
-                  </a>
-                </li>
-              </ul>
-            </nav>
-          )}
+            )}
         </div>
       </div>
+      <RequestModal
+        isOpen={!!requestModalItem}
+        toggle={() => setRequestModalItem(null)}
+        item={requestModalItem}
+        apiFetch={apiFetch}
+      />
     </div>
   );
 };

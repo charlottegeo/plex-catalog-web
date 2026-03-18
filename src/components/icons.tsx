@@ -1,9 +1,11 @@
 import {
   MdSubtitles,
+  MdCheck,
   MdChevronLeft,
   MdChevronRight,
   MdFilterList,
   MdPlayCircleFilled,
+  MdUpgrade,
 } from 'react-icons/md';
 import { FaSortAmountUp, FaSortAmountDown } from 'react-icons/fa';
 import { PiFilmReelFill } from 'react-icons/pi';
@@ -13,8 +15,16 @@ type IconProps = {
   onClick?: () => void;
 };
 
+export const CheckIcon = ({ className }: IconProps) => {
+  return <MdCheck className={className} />;
+};
+
 export const SubtitlesIcon = ({ className }: IconProps) => {
   return <MdSubtitles className={className} />;
+};
+
+export const UpgradeIcon = ({ className }: IconProps) => {
+  return <MdUpgrade className={className} />;
 };
 
 export const PlexIcon = ({ className }: IconProps) => {

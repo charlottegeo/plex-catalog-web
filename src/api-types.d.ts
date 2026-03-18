@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Plex's global discover catalog for movies and TV shows.
+         * @description Uses the Plex account token to query metadata.provider.plex.tv.
+         */
+        get: operations["discover_handler"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/media/{guid}": {
         parameters: {
             query?: never;
@@ -19,6 +39,78 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all media requests (both pending and fulfilled). */
+        get: operations["get_all_requests_handler"];
+        put?: never;
+        /**
+         * Create or update a media request.
+         * @description On conflict with an existing pending request for the same (username, guid), merges seasons and updates resolution.
+         */
+        post: operations["create_request_handler"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/requests/notifications/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all requests for a user as viewed/clear notifications. */
+        post: operations["clear_notifications_handler"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/requests/notifications/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get number of unread notifications for a user. */
+        get: operations["get_notification_count_handler"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete the user's own pending request. */
+        delete: operations["delete_request_handler"];
         options?: never;
         head?: never;
         patch?: never;
@@ -184,26 +276,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/servers/{server_id}/play/{rating_key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a play queue for instant playback.
-         * @description Calls the Plex playQueues API. Send `X-Plex-Client-Identifier` to use a unique session and avoid queue collisions between users.
-         */
-        post: operations["create_play_queue_handler"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/servers/{server_id}/seasons/{season_id}/episodes": {
         parameters: {
             query?: never;
@@ -274,7 +346,10 @@ export interface components {
             id: string;
             isOnline: boolean;
             lastSeen: string;
+            /** @description Server name/nickname. */
             name: string;
+            /** @description Plex owner username (Plex's `sourceTitle`). */
+            ownerUsername?: string | null;
         };
         EpisodeDetails: {
             contentRating?: string | null;
@@ -375,20 +450,54 @@ export interface components {
             /** Format: int32 */
             year?: number | null;
         };
+        /** @description Media request from the database. */
+        MediaRequest: {
+            createdAt: string;
+            /** Format: int64 */
+            duration?: number | null;
+            guid: string;
+            /** Format: int32 */
+            id: number;
+            isUpgrade: boolean;
+            isViewed: boolean;
+            itemType: string;
+            requestedResolution?: string | null;
+            requestedSeasons?: number[] | null;
+            serverNames?: string[] | null;
+            status: string;
+            thumb?: string | null;
+            title: string;
+            updatedAt: string;
+            username: string;
+            /** Format: int32 */
+            year?: number | null;
+        };
+        /** @description Payload for creating/updating a media request. */
+        MediaRequestPayload: {
+            /** Format: int64 */
+            duration?: number | null;
+            guid: string;
+            itemType: string;
+            requestedResolution?: string | null;
+            requestedSeasons?: number[] | null;
+            thumb?: string | null;
+            title: string;
+            /** Format: int32 */
+            year?: number | null;
+        };
         MediaVersion: {
             subtitles: string[];
             videoResolution: string;
+        };
+        /** @description Number of unread notifications. */
+        NotificationCount: {
+            /** Format: int64 */
+            count: number;
         };
         Part: {
             Stream?: components["schemas"]["Stream"][];
             /** Format: int64 */
             id: number;
-        };
-        /** @description Response from the Plex playQueues API for instant playback of media. */
-        PlayQueueResponse: {
-            Metadata?: unknown[];
-            /** Format: int64 */
-            playQueueID: number;
         };
         /** @description Single bonus feature/extra from the database. */
         PlexExtra: {
@@ -472,6 +581,29 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    discover_handler: {
+        parameters: {
+            query: {
+                /** @description Search query */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Search results from Plex discover */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     get_media_details_handler: {
         parameters: {
             query?: never;
@@ -495,6 +627,116 @@ export interface operations {
             };
             /** @description Media not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_all_requests_handler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of all requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRequest"][];
+                };
+            };
+        };
+    };
+    create_request_handler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaRequestPayload"];
+            };
+        };
+        responses: {
+            /** @description Created or updated request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRequest"];
+                };
+            };
+        };
+    };
+    clear_notifications_handler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notifications cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_notification_count_handler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unread notification count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationCount"];
+                };
+            };
+        };
+    };
+    delete_request_handler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Request ID to delete */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Request deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request not found or does not belong to user */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -727,38 +969,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Item"][];
-                };
-            };
-            /** @description Server not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    create_play_queue_handler: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Server ID (Plex client identifier) */
-                server_id: string;
-                /** @description Item rating key to play (movie or episode) */
-                rating_key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Play queue created */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlayQueueResponse"];
                 };
             };
             /** @description Server not found */

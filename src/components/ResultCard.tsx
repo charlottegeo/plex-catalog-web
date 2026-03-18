@@ -1,13 +1,25 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { GroupedResult, MediaDetails } from '../types';
+import { DiscoverResult, GroupedResult, MediaDetails } from '../types';
 import { useApiFetch } from '../utils/api';
 import { formatDuration, formatResolution } from '../utils/formatting';
 import { SubtitlesIcon } from './icons';
 
+type ResultCardItem = GroupedResult | DiscoverResult;
+
+function isGroupedResult(item: ResultCardItem): item is GroupedResult {
+  return 'servers' in item && Array.isArray(item.servers);
+}
+
+function getItemType(item: ResultCardItem): string {
+  return 'itemType' in item ? item.itemType : item.type;
+}
+
 type ResultCardProps = {
-  item: GroupedResult;
+  item: ResultCardItem;
   displayMode?: 'search' | 'library';
   hideTypeTag?: boolean;
+  actionElement?: React.ReactNode;
+  imageUrl?: string | null;
 };
 
 const ServerPills = ({
@@ -116,33 +128,49 @@ const ResultCard = ({
   item,
   displayMode = 'search',
   hideTypeTag = false,
+  actionElement,
+  imageUrl: imageUrlProp,
 }: ResultCardProps) => {
   const [mediaDetails, setMediaDetails] = useState<MediaDetails | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [fetchedImageUrl, setFetchedImageUrl] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const isSingleServer = item.servers.length === 1;
+  const itemType = getItemType(item);
+  const isGrouped = isGroupedResult(item);
+  const isSingleServer = isGrouped && item.servers.length === 1;
+  const imageUrl = imageUrlProp ?? fetchedImageUrl;
 
   const apiFetch = useApiFetch();
 
   const topResolutions = useMemo(() => {
-    if (!mediaDetails || item.itemType !== 'movie') return [];
+    if (!mediaDetails || itemType !== 'movie') return [];
     const allResolutions = mediaDetails.availableOn.flatMap((server) =>
       server.versions.map((v) => v.videoResolution)
     );
     const uniqueResolutions = [...new Set(allResolutions)];
     const sorted = sortResolutions(uniqueResolutions);
     return sorted.slice(0, 3).map(formatResolution);
-  }, [mediaDetails, item.itemType]);
+  }, [mediaDetails, itemType]);
 
   const hasSubtitles = useMemo(() => {
-    if (!mediaDetails || item.itemType !== 'movie') return false;
+    if (!mediaDetails || itemType !== 'movie') return false;
     return mediaDetails.availableOn.some((server) =>
       server.versions.some((v) => v.subtitles.length > 0)
     );
-  }, [mediaDetails, item.itemType]);
+  }, [mediaDetails, itemType]);
+
+  const seasonCount =
+    itemType === 'show' && 'childCount' in item && item.childCount
+      ? `${item.childCount} Season${item.childCount === 1 ? '' : 's'}`
+      : null;
+
+  const itemKey = isGrouped
+    ? ((item as GroupedResult).guid ?? '')
+    : item.ratingKey;
+  const thumbPath = isGrouped ? (item as GroupedResult).thumbPath : undefined;
+  const servers = isGrouped ? (item as GroupedResult).servers : undefined;
 
   useEffect(() => {
-    if (!cardRef.current || item.itemType !== 'movie') return;
+    if (!cardRef.current || itemType !== 'movie' || !isGrouped) return;
 
     const observer = new IntersectionObserver(
       async ([entry]) => {
@@ -150,7 +178,7 @@ const ResultCard = ({
           observer.disconnect();
           try {
             const response = await apiFetch(
-              `/api/media/${encodeURIComponent(item.guid ?? '')}`
+              `/api/media/${encodeURIComponent(itemKey)}`
             );
             if (response.ok) {
               const data = (await response.json()) as MediaDetails;
@@ -166,23 +194,25 @@ const ResultCard = ({
 
     observer.observe(cardRef.current);
     return () => observer.disconnect();
-  }, [item.guid, item.itemType, apiFetch]);
+  }, [isGrouped, itemKey, itemType, apiFetch]);
 
   useEffect(() => {
+    if (imageUrlProp != null) return;
     let objectUrl: string | null = null;
     const fetchImage = async () => {
-      if (item.servers[0]?.id && item.thumbPath) {
+      if (!isGrouped || !servers || !thumbPath) return;
+      if (servers[0]?.id && thumbPath) {
         try {
-          const imagePath = item.thumbPath.startsWith('/')
-            ? item.thumbPath.substring(1)
-            : item.thumbPath;
+          const imagePath = thumbPath.startsWith('/')
+            ? thumbPath.substring(1)
+            : thumbPath;
           const response = await apiFetch(
-            `/api/servers/${item.servers[0].id}/image/${imagePath}?width=300&height=450`
+            `/api/servers/${servers[0].id}/image/${imagePath}?width=300&height=450`
           );
           if (response.ok) {
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
-            setImageUrl(objectUrl);
+            setFetchedImageUrl(objectUrl);
           }
         } catch (error) {
           console.error('Failed to fetch image', error);
@@ -193,13 +223,16 @@ const ResultCard = ({
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [item.thumbPath, item.servers, apiFetch]);
+  }, [imageUrlProp, isGrouped, thumbPath, servers, apiFetch]);
+
+  const duration =
+    'duration' in item && item.duration ? formatDuration(item.duration) : null;
 
   return (
     <div className="card result-card h-100" ref={cardRef}>
       {!hideTypeTag && (
         <div className="metadata-badge text-uppercase">
-          {item.itemType === 'movie' ? 'Movie' : 'Show'}
+          {itemType === 'movie' ? 'Movie' : 'Show'}
         </div>
       )}
 
@@ -208,6 +241,7 @@ const ResultCard = ({
           src={imageUrl}
           alt={item.title}
           className="card-img-top card-poster"
+          style={{ aspectRatio: '2/3', objectFit: 'cover', width: '100%' }}
         />
       ) : (
         <div className="card-img-top card-poster d-flex align-items-center justify-content-center bg-light">
@@ -223,56 +257,61 @@ const ResultCard = ({
             style={{ gap: '0.5rem' }}
           >
             {item.year && <span>{item.year}</span>}
-            {item.contentRating && <span>{item.contentRating}</span>}
-            {item.duration && <span>{formatDuration(item.duration)}</span>}
+            {'contentRating' in item && item.contentRating && (
+              <span>{item.contentRating}</span>
+            )}
+            {duration && <span>{duration}</span>}
+            {seasonCount && <span>{seasonCount}</span>}
           </p>
         </div>
 
         <div className="server-pills mt-auto">
-          {displayMode === 'library' ? (
-            <div className="single-server-info">
-              {item.itemType === 'movie' && topResolutions.length > 0 && (
-                <div className="version-info mt-1">
-                  {topResolutions.map((res, i) => (
-                    <span key={i} className="badge badge-secondary mr-1">
-                      {res}
-                    </span>
-                  ))}
-                  {hasSubtitles && <SubtitlesIcon />}
-                </div>
-              )}
-            </div>
-          ) : isSingleServer ? (
-            <div className="single-server-info">
-              <span className="badge badge-light text-dark border">
-                {item.servers[0].name}
-              </span>
-              {item.itemType === 'movie' && topResolutions.length > 0 && (
-                <div className="version-info mt-1">
-                  {topResolutions.map((res, i) => (
-                    <span key={i} className="badge badge-secondary mr-1">
-                      {res}
-                    </span>
-                  ))}
-                  {hasSubtitles && <SubtitlesIcon />}
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <ServerPills servers={item.servers} />
-              {item.itemType === 'movie' && topResolutions.length > 0 && (
-                <div className="version-info mt-1">
-                  {topResolutions.map((res, i) => (
-                    <span key={i} className="badge badge-secondary mr-1">
-                      {res}
-                    </span>
-                  ))}
-                  {hasSubtitles && <SubtitlesIcon />}
-                </div>
-              )}
-            </>
-          )}
+          {isGrouped &&
+            (displayMode === 'library' ? (
+              <div className="single-server-info">
+                {itemType === 'movie' && topResolutions.length > 0 && (
+                  <div className="version-info mt-1">
+                    {topResolutions.map((res, i) => (
+                      <span key={i} className="badge badge-secondary mr-1">
+                        {res}
+                      </span>
+                    ))}
+                    {hasSubtitles && <SubtitlesIcon />}
+                  </div>
+                )}
+              </div>
+            ) : isSingleServer && isGrouped ? (
+              <div className="single-server-info">
+                <span className="badge badge-light text-dark border">
+                  {item.servers[0].name}
+                </span>
+                {itemType === 'movie' && topResolutions.length > 0 && (
+                  <div className="version-info mt-1">
+                    {topResolutions.map((res, i) => (
+                      <span key={i} className="badge badge-secondary mr-1">
+                        {res}
+                      </span>
+                    ))}
+                    {hasSubtitles && <SubtitlesIcon />}
+                  </div>
+                )}
+              </div>
+            ) : isGrouped ? (
+              <>
+                <ServerPills servers={item.servers} />
+                {itemType === 'movie' && topResolutions.length > 0 && (
+                  <div className="version-info mt-1">
+                    {topResolutions.map((res, i) => (
+                      <span key={i} className="badge badge-secondary mr-1">
+                        {res}
+                      </span>
+                    ))}
+                    {hasSubtitles && <SubtitlesIcon />}
+                  </div>
+                )}
+              </>
+            ) : null)}
+          {actionElement}
         </div>
       </div>
     </div>

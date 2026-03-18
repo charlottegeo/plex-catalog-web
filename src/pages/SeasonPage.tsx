@@ -494,9 +494,7 @@ const SeasonPage = () => {
         <ModalBody>
           <div className="text-center">
             <p className="mb-0">
-              {pendingPlexUrl?.startsWith('plex://')
-                ? 'This will attempt to instantly play '
-                : 'This will open '}
+              This will open{' '}
               <strong>
                 {pendingItemTitle ??
                   (isHiddenSeason ? show?.title : season?.title)}
@@ -507,15 +505,12 @@ const SeasonPage = () => {
                   <strong>{serverName}</strong>
                 </>
               )}
-              {pendingPlexUrl?.startsWith('plex://')
-                ? ' using the native Plex app.'
-                : ' in a new tab.'}
+              {' in a new tab.'}
             </p>
 
             <p className="mb-0 mt-2 text-muted small">
-              {pendingPlexUrl?.startsWith('plex://')
-                ? 'Note: You must have the Plex Desktop or Mobile app installed for auto-play.'
-                : 'You must be logged into the CSH Plex account for this link to work.'}
+              You must be logged into the CSH Plex account in your browser for
+              this link to work.
             </p>
           </div>
         </ModalBody>

@@ -2,6 +2,9 @@ import { OidcConfiguration } from '@axa-fr/react-oidc';
 
 const oidcConfig: OidcConfiguration = {
   client_id: import.meta.env.VITE_SSO_CLIENT_ID ?? 'test',
+  token_request_extras: {
+    client_secret: import.meta.env.VITE_SSO_CLIENT_SECRET ?? 'test',
+  },
   redirect_uri: `${window.location.protocol}//${window.location.hostname}${
     window.location.port ? `:${window.location.port}` : ''
   }/authentication/callback`,

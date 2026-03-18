@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'reactstrap';
 import { PlexIcon, SubtitlesIcon } from '../components/icons';
+import RequestModal from '../components/RequestModal';
 import ServerExtras from '../components/ServerExtras';
 import TVShowSeasons from '../components/TVShowSeasons';
+import { DbServer } from '../types';
 import { useApiFetch } from '../utils/api';
 import { formatDuration, formatResolution } from '../utils/formatting';
 import './MediaDetailsPage.css';
@@ -76,30 +78,18 @@ const MediaDetailsPage = () => {
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const [isSummaryTruncated, setIsSummaryTruncated] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [pendingPlexUrl, setPendingPlexUrl] = useState<string | null>(null);
+  const [pendingServerId, setPendingServerId] = useState<string | null>(null);
+  const [pendingRatingKey, setPendingRatingKey] = useState<string | null>(null);
   const [pendingServerName, setPendingServerName] = useState<string | null>(
     null
   );
   const [pendingItemTitle, setPendingItemTitle] = useState<string | null>(null);
   const [seasonCounts, setSeasonCounts] = useState<Record<string, number>>({});
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const summaryRef = useRef<HTMLParagraphElement>(null);
+  const [serversById, setServersById] = useState<Record<string, DbServer>>({});
 
   const apiFetch = useApiFetch();
-
-  const getPlexUrl = (serverIdValue: string, ratingKey: string) =>
-    `https://app.plex.tv/desktop/#!/server/${serverIdValue}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
-
-  const showPlexOpenModal = (
-    serverId: string,
-    ratingKey: string,
-    serverName: string,
-    itemTitle: string
-  ) => {
-    setPendingPlexUrl(getPlexUrl(serverId, ratingKey));
-    setPendingServerName(serverName);
-    setPendingItemTitle(itemTitle);
-    setModalOpen(true);
-  };
 
   const handlePlexButtonClick = (
     e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>,
@@ -109,17 +99,22 @@ const MediaDetailsPage = () => {
     itemTitle: string
   ) => {
     e.preventDefault();
-    showPlexOpenModal(serverId, ratingKey, serverName, itemTitle);
+    setPendingServerId(serverId);
+    setPendingRatingKey(ratingKey);
+    setPendingServerName(serverName);
+    setPendingItemTitle(itemTitle);
+    setModalOpen(true);
   };
 
   const confirmPlexOpen = () => {
-    if (pendingPlexUrl) {
-      window.open(pendingPlexUrl, '_blank', 'noopener');
-      setModalOpen(false);
-      setPendingPlexUrl(null);
-      setPendingServerName(null);
-      setPendingItemTitle(null);
-    }
+    if (!pendingServerId || !pendingRatingKey) return;
+    const detailsUrl = `https://app.plex.tv/desktop/#!/server/${pendingServerId}/details?key=%2Flibrary%2Fmetadata%2F${pendingRatingKey}`;
+    window.open(detailsUrl, '_blank', 'noopener');
+    setModalOpen(false);
+    setPendingServerId(null);
+    setPendingRatingKey(null);
+    setPendingServerName(null);
+    setPendingItemTitle(null);
   };
 
   useEffect(() => {
@@ -219,6 +214,25 @@ const MediaDetailsPage = () => {
   }, [details?.summary, isSummaryExpanded]);
 
   useEffect(() => {
+    const fetchServers = async () => {
+      try {
+        const response = await apiFetch('/api/servers');
+        if (!response.ok) return;
+        const servers = (await response.json()) as DbServer[];
+        const map: Record<string, DbServer> = {};
+        servers.forEach((s) => {
+          map[s.id] = s;
+        });
+        setServersById(map);
+      } catch {
+        console.error('Failed to fetch servers');
+      }
+    };
+
+    fetchServers();
+  }, [apiFetch]);
+
+  useEffect(() => {
     if (details?.itemType !== 'show') return;
 
     const fetchSeasonCounts = async () => {
@@ -300,6 +314,14 @@ const MediaDetailsPage = () => {
                       {details.contentRating}
                     </span>
                   )}
+                  <Button
+                    color="outline-primary"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => setUpgradeModalOpen(true)}
+                  >
+                    Request Upgrade
+                  </Button>
                 </div>
               </div>
               <div className="summary-wrapper">
@@ -357,12 +379,19 @@ const MediaDetailsPage = () => {
                   (v) => v.subtitles
                 );
                 const uniqueSubtitles = [...new Set(allSubtitles)];
+                const ownerUsername =
+                  serversById[server.serverId]?.ownerUsername;
 
                 return (
                   <div key={server.serverId} className="source-section">
                     <div className="d-flex align-items-start justify-content-between">
                       <div className="flex-grow-1 d-flex flex-column">
                         <h3 className="h4 mb-0">{server.serverName}</h3>
+                        {ownerUsername && (
+                          <p className="text-muted small mb-0 mt-1">
+                            {ownerUsername}
+                          </p>
+                        )}
                         <div className="movie-details-card pt-2">
                           <div className="d-flex align-items-center flex-wrap">
                             {server.versions.map((v, i) => (
@@ -385,7 +414,7 @@ const MediaDetailsPage = () => {
                         </div>
                       </div>
                       <a
-                        href={getPlexUrl(server.serverId, server.ratingKey)}
+                        href={`https://app.plex.tv/desktop/#!/server/${server.serverId}/details?key=%2Flibrary%2Fmetadata%2F${server.ratingKey}`}
                         onClick={(e) =>
                           handlePlexButtonClick(
                             e,
@@ -411,52 +440,62 @@ const MediaDetailsPage = () => {
           )}
           {details.itemType === 'show' && (
             <div className="sources-stack">
-              {details.availableOn.map((server) => (
-                <div key={server.serverId} className="source-section">
-                  <div className="d-flex align-items-start justify-content-between mb-3 flex-wrap">
-                    <div className="flex-grow-1 d-flex flex-column">
-                      <div>
-                        <h3 className="h4 mb-0">{server.serverName}</h3>
-                        {seasonCounts[server.serverId] !== undefined && (
-                          <p className="text-muted small mb-0 mt-1">
-                            {seasonCounts[server.serverId]}{' '}
-                            {seasonCounts[server.serverId] === 1
-                              ? 'season'
-                              : 'seasons'}
-                          </p>
-                        )}
+              {details.availableOn.map((server) => {
+                const ownerUsername =
+                  serversById[server.serverId]?.ownerUsername;
+
+                return (
+                  <div key={server.serverId} className="source-section">
+                    <div className="d-flex align-items-start justify-content-between mb-3 flex-wrap">
+                      <div className="flex-grow-1 d-flex flex-column">
+                        <div>
+                          <h3 className="h4 mb-0">{server.serverName}</h3>
+                          {ownerUsername && (
+                            <p className="text-muted small mb-0 mt-1">
+                              {ownerUsername}
+                            </p>
+                          )}
+                          {seasonCounts[server.serverId] !== undefined && (
+                            <p className="text-muted small mb-0 mt-1">
+                              {seasonCounts[server.serverId]}{' '}
+                              {seasonCounts[server.serverId] === 1
+                                ? 'season'
+                                : 'seasons'}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                      <a
+                        href={`https://app.plex.tv/desktop/#!/server/${server.serverId}/details?key=%2Flibrary%2Fmetadata%2F${server.ratingKey}`}
+                        onClick={(e) =>
+                          handlePlexButtonClick(
+                            e,
+                            server.serverId,
+                            server.ratingKey,
+                            server.serverName,
+                            details.title ?? ''
+                          )
+                        }
+                        className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
+                      >
+                        <PlexIcon className="mr-1" /> Open
+                      </a>
                     </div>
-                    <a
-                      href={getPlexUrl(server.serverId, server.ratingKey)}
-                      onClick={(e) =>
-                        handlePlexButtonClick(
-                          e,
-                          server.serverId,
-                          server.ratingKey,
-                          server.serverName,
-                          details.title ?? ''
-                        )
-                      }
-                      className="btn btn-warning btn-sm d-flex align-items-center align-self-center plex-open-button"
-                    >
-                      <PlexIcon className="mr-1" /> Open
-                    </a>
-                  </div>
-                  <div className="source-seasons-container">
-                    <TVShowSeasons
-                      showId={server.ratingKey}
+                    <div className="source-seasons-container">
+                      <TVShowSeasons
+                        showId={server.ratingKey}
+                        serverId={server.serverId}
+                        showGuid={details.guid}
+                        showTitle={details.title}
+                      />
+                    </div>
+                    <ServerExtras
                       serverId={server.serverId}
-                      showGuid={details.guid}
-                      showTitle={details.title}
+                      ratingKey={server.ratingKey}
                     />
                   </div>
-                  <ServerExtras
-                    serverId={server.serverId}
-                    ratingKey={server.ratingKey}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -481,8 +520,8 @@ const MediaDetailsPage = () => {
             </p>
 
             <p className="mb-0 mt-2 text-muted small">
-              You must be logged into the CSH Plex account for this link to
-              work.
+              You must be logged into the CSH Plex account in your browser for
+              this link to work.
             </p>
           </div>
         </ModalBody>
@@ -495,6 +534,14 @@ const MediaDetailsPage = () => {
           </Button>
         </ModalFooter>
       </Modal>
+
+      <RequestModal
+        isOpen={upgradeModalOpen}
+        toggle={() => setUpgradeModalOpen(!upgradeModalOpen)}
+        item={details}
+        apiFetch={apiFetch}
+        isUpgrade
+      />
     </>
   );
 };

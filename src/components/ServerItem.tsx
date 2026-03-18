@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import {
   Card,
-  CardHeader,
   CardBody,
+  CardHeader,
   Collapse,
   ListGroup,
   ListGroupItem,
@@ -38,7 +38,12 @@ const ServerItem = ({
               server.isOnline ? 'status-online' : 'status-offline'
             }`}
           />
-          <h5 className="mb-0">{server.name}</h5>
+          <div className="d-flex flex-column">
+            <h5 className="mb-0">{server.name}</h5>
+            {server.ownerUsername && (
+              <small className="text-muted">{server.ownerUsername}</small>
+            )}
+          </div>
         </div>
         {server.isOnline && (
           <span className={`caret ${isOpen ? 'open' : ''}`} />
