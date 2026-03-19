@@ -1,0 +1,8 @@
+.request-modal-season-cb.custom-control {
+  padding-left: 2rem;
+}
+
+.request-modal-season-cb .custom-control-label::before,
+.request-modal-season-cb .custom-control-label::after {
+  left: -1.5rem;
+}
