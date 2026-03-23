@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Nav, NavItem, NavLink, Spinner } from 'reactstrap';
+import { CheckIcon, NewIcon, UpgradeIcon } from '../components/icons';
 import { SSOEnabled } from '../configuration';
 import { getUseOidcAccessToken, NoSSOUserInfo } from '../SSODisabledDefaults';
 import type { MediaRequest } from '../types';
@@ -227,7 +228,7 @@ const RequestsPage = () => {
             const mediaPath = `/media/${request.guid.replace('plex://', '')}`;
 
             const cardContent = (
-              <>
+              <div className="position-relative">
                 {request.thumb ? (
                   thumbUrl ? (
                     <RequestThumbnail src={thumbUrl} alt={request.title} />
@@ -247,20 +248,33 @@ const RequestsPage = () => {
                     {request.itemType === 'movie' ? 'Movie' : 'Show'}
                   </div>
                 )}
+                <span
+                  className="request-status-icon"
+                  title={
+                    isFulfilled
+                      ? 'Fulfilled'
+                      : request.isUpgrade
+                        ? 'Upgrade request'
+                        : 'New request'
+                  }
+                >
+                  {isFulfilled ? (
+                    <CheckIcon className="request-status-icon--fulfilled" />
+                  ) : request.isUpgrade ? (
+                    <UpgradeIcon className="request-status-icon--upgrade" />
+                  ) : (
+                    <NewIcon className="request-status-icon--new" />
+                  )}
+                </span>
                 <div className="card-body p-2 d-flex flex-column">
                   <h3 className="card-title h6 mb-1 text-dark">
                     {request.title}
                   </h3>
                   {isFulfilled && (
-                    <>
-                      <span className="badge badge-success mb-1">
-                        ✓ Fulfilled
-                      </span>
-                      <small className="d-block text-muted mb-1">
-                        Available on:{' '}
-                        {request.serverNames?.join(', ') || 'Unknown Server'}
-                      </small>
-                    </>
+                    <small className="d-block text-muted mb-1">
+                      Available on:{' '}
+                      {request.serverNames?.join(', ') || 'Unknown Server'}
+                    </small>
                   )}
                   <p
                     className="card-year text-muted small mb-1 d-flex align-items-center flex-wrap"
@@ -290,9 +304,6 @@ const RequestsPage = () => {
                   <small className="text-muted d-block mb-1">
                     Requested by: {formatRequestedBy(request.username)}
                   </small>
-                  {request.isUpgrade && (
-                    <span className="badge badge-info mb-1">Upgrade</span>
-                  )}
                   {request.requestedResolution && (
                     <small className="d-block mb-1">
                       Resolution: {request.requestedResolution}
@@ -331,7 +342,7 @@ const RequestsPage = () => {
                     </div>
                   )}
                 </div>
-              </>
+              </div>
             );
 
             return isFulfilled ? (

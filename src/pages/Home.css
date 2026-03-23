@@ -22,7 +22,7 @@
   .search-header {
     max-width: 100%;
   }
-  
+
   .col-lg-9 {
     padding-top: 0;
     display: flex;
@@ -116,6 +116,40 @@
   z-index: 2;
 }
 
+.request-status-icon {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.35rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 2;
+  cursor: default;
+}
+
+.request-status-icon svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+.request-status-icon--upgrade {
+  color: #0d6efd;
+}
+
+.request-status-icon--fulfilled {
+  color: #198754;
+}
+
+.request-status-icon--new {
+  color: #E11C52;
+}
+
 @media (hover: hover) {
   .result-card:hover .metadata-badge {
     opacity: 1;
@@ -207,12 +241,12 @@
     bottom: 0;
     width: 100%;
   }
-  
+
   .modal-filter-sheet .modal-content {
     border: none;
     max-height: 85vh;
   }
-  
+
   .mobile-server-list {
     max-height: 40vh;
     overflow-y: auto;

@@ -6,6 +6,7 @@ import {
   MdFilterList,
   MdPlayCircleFilled,
   MdUpgrade,
+  MdOutlineFiberNew,
 } from 'react-icons/md';
 import { FaSortAmountUp, FaSortAmountDown } from 'react-icons/fa';
 import { PiFilmReelFill } from 'react-icons/pi';
@@ -63,4 +64,8 @@ export const FilmReelIcon = ({ className, style }: IconProps) => (
 
 export const PlayIcon = ({ className, style }: IconProps) => (
   <MdPlayCircleFilled className={className} style={style} />
+);
+
+export const NewIcon = ({ className, style }: IconProps) => (
+  <MdOutlineFiberNew className={className} style={style} />
 );

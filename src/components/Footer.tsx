@@ -71,7 +71,7 @@ export default function Footer() {
                     |
                   </span>
                   <span className="d-block d-md-inline">
-                    Syncs every {systemInfo.syncIntervalMinutes} minutes
+                    Next sync in {systemInfo.syncIntervalMinutes} minutes
                   </span>
                 </div>
               </div>
