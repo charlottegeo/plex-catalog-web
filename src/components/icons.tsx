@@ -1,14 +1,15 @@
+import { FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 import {
-  MdSubtitles,
+  MdBrokenImage,
   MdCheck,
   MdChevronLeft,
   MdChevronRight,
   MdFilterList,
-  MdPlayCircleFilled,
-  MdUpgrade,
   MdOutlineFiberNew,
+  MdPlayCircleFilled,
+  MdSubtitles,
+  MdUpgrade,
 } from 'react-icons/md';
-import { FaSortAmountUp, FaSortAmountDown } from 'react-icons/fa';
 import { PiFilmReelFill } from 'react-icons/pi';
 type IconProps = {
   className?: string;
@@ -68,4 +69,8 @@ export const PlayIcon = ({ className, style }: IconProps) => (
 
 export const NewIcon = ({ className, style }: IconProps) => (
   <MdOutlineFiberNew className={className} style={style} />
+);
+
+export const BrokenImageIcon = ({ className, style }: IconProps) => (
+  <MdBrokenImage className={className} style={style} />
 );

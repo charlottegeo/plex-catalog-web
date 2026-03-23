@@ -13,6 +13,19 @@ export const formatResolution = (resolution?: string): string => {
   return resolution;
 };
 
+export const REQUEST_RESOLUTION_TIERS = ['720p', '1080p', '4K'] as const;
+export type RequestResolutionTier = (typeof REQUEST_RESOLUTION_TIERS)[number];
+
+export function parseVideoResolutionTier(
+  raw: string
+): RequestResolutionTier | null {
+  const normalized = formatResolution(raw);
+  if (normalized === '4K' || normalized === '8K') return '4K';
+  if (normalized === '1080p') return '1080p';
+  if (normalized === '720p') return '720p';
+  return null;
+}
+
 export const formatDuration = (ms?: number): string => {
   if (!ms) return '';
   const totalMinutes = Math.floor(ms / 60000);

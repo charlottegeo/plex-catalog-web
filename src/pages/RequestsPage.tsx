@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Nav, NavItem, NavLink, Spinner } from 'reactstrap';
-import { CheckIcon, NewIcon, UpgradeIcon } from '../components/icons';
+import {
+  BrokenImageIcon,
+  CheckIcon,
+  NewIcon,
+  UpgradeIcon,
+} from '../components/icons';
 import { SSOEnabled } from '../configuration';
 import { getUseOidcAccessToken, NoSSOUserInfo } from '../SSODisabledDefaults';
 import type { MediaRequest } from '../types';
@@ -34,8 +39,10 @@ type RequestThumbnailProps = {
 function RequestThumbnail({ src, alt }: RequestThumbnailProps) {
   const apiFetch = useApiFetch();
   const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
+    setError(false);
     if (!src.startsWith('/api/')) {
       setResolvedSrc(src);
       return;
@@ -46,12 +53,16 @@ function RequestThumbnail({ src, alt }: RequestThumbnailProps) {
     const fetchImage = async () => {
       try {
         const response = await apiFetch(src);
-        if (!response.ok) return;
+        if (!response.ok) {
+          setError(true);
+          return;
+        }
         const blob = await response.blob();
         objectUrl = URL.createObjectURL(blob);
         setResolvedSrc(objectUrl);
-      } catch (error) {
-        console.error('Failed to fetch request thumbnail', error);
+      } catch (err) {
+        console.error('Failed to fetch request thumbnail', err);
+        setError(true);
       }
     };
 
@@ -62,7 +73,24 @@ function RequestThumbnail({ src, alt }: RequestThumbnailProps) {
     };
   }, [src, apiFetch]);
 
-  if (!resolvedSrc) return null;
+  if (error) {
+    return (
+      <div
+        className="card-img-top request-poster-error"
+        role="img"
+        aria-label={`Poster for ${alt} could not be loaded`}
+        title="Poster could not be loaded"
+      >
+        <BrokenImageIcon className="request-poster-error__icon" />
+      </div>
+    );
+  }
+
+  if (!resolvedSrc) {
+    return (
+      <div className="card-img-top request-poster-placeholder" aria-hidden />
+    );
+  }
 
   return (
     <img
@@ -74,6 +102,7 @@ function RequestThumbnail({ src, alt }: RequestThumbnailProps) {
         objectFit: 'cover',
         width: '100%',
       }}
+      onError={() => setError(true)}
     />
   );
 }
@@ -182,12 +211,13 @@ const RequestsPage = () => {
               setActiveTab('pending');
             }}
           >
-            Pending (
+            Pending
+            {/*(  //commented out because I'm not sure if the number makes it look like a notification
             {
               requests.filter((r) => r.status.toLowerCase() === 'pending')
                 .length
             }
-            )
+            ) */}
           </NavLink>
         </NavItem>
         <NavItem>
@@ -199,12 +229,13 @@ const RequestsPage = () => {
               setActiveTab('fulfilled');
             }}
           >
-            Fulfilled (
+            Fulfilled
+            {/*(  //commented out because I'm not sure if the number makes it look like a notification
             {
               requests.filter((r) => r.status.toLowerCase() !== 'pending')
                 .length
             }
-            )
+            ) */}
           </NavLink>
         </NavItem>
       </Nav>
@@ -228,7 +259,7 @@ const RequestsPage = () => {
             const mediaPath = `/media/${request.guid.replace('plex://', '')}`;
 
             const cardContent = (
-              <div className="position-relative">
+              <div className="position-relative d-flex flex-column h-100">
                 {request.thumb ? (
                   thumbUrl ? (
                     <RequestThumbnail src={thumbUrl} alt={request.title} />
@@ -249,7 +280,13 @@ const RequestsPage = () => {
                   </div>
                 )}
                 <span
-                  className="request-status-icon"
+                  className={`request-status-icon request-status-icon--${
+                    isFulfilled
+                      ? 'fulfilled'
+                      : request.isUpgrade
+                        ? 'upgrade'
+                        : 'new'
+                  }`}
                   title={
                     isFulfilled
                       ? 'Fulfilled'
@@ -259,14 +296,14 @@ const RequestsPage = () => {
                   }
                 >
                   {isFulfilled ? (
-                    <CheckIcon className="request-status-icon--fulfilled" />
+                    <CheckIcon />
                   ) : request.isUpgrade ? (
-                    <UpgradeIcon className="request-status-icon--upgrade" />
+                    <UpgradeIcon />
                   ) : (
-                    <NewIcon className="request-status-icon--new" />
+                    <NewIcon />
                   )}
                 </span>
-                <div className="card-body p-2 d-flex flex-column">
+                <div className="card-body p-2 d-flex flex-column flex-grow-1">
                   <h3 className="card-title h6 mb-1 text-dark">
                     {request.title}
                   </h3>
@@ -301,26 +338,40 @@ const RequestsPage = () => {
                         </span>
                       )}
                   </p>
-                  <small className="text-muted d-block mb-1">
-                    Requested by: {formatRequestedBy(request.username)}
-                  </small>
+                  <div className="mb-1">
+                    <span className="badge badge-light border text-dark">
+                      Requested by: {formatRequestedBy(request.username)}
+                    </span>
+                  </div>
                   {request.requestedResolution && (
-                    <small className="d-block mb-1">
-                      Resolution: {request.requestedResolution}
-                    </small>
+                    <div className="mb-1">
+                      <span className="badge badge-info">
+                        {request.requestedResolution}
+                      </span>
+                    </div>
                   )}
                   {request.requestedSeasons &&
                     request.requestedSeasons.length > 0 && (
-                      <small className="d-block mb-2">
-                        Seasons: {request.requestedSeasons.join(', ')}
-                      </small>
+                      <div
+                        className="d-flex flex-wrap mb-2"
+                        style={{ gap: '0.35rem' }}
+                      >
+                        {request.requestedSeasons.map((seasonNum) => (
+                          <span
+                            key={seasonNum}
+                            className="badge badge-light border text-dark"
+                            title={`Season ${seasonNum}`}
+                          >
+                            S{seasonNum}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   {activeTab === 'pending' && (
                     <div className="mt-auto">
                       {isOwnRequest ? (
                         <Button
                           color="danger"
-                          outline
                           size="sm"
                           className="w-100"
                           onClick={() => handleCancel(request.id)}
@@ -330,13 +381,12 @@ const RequestsPage = () => {
                       ) : (
                         <Button
                           color="primary"
-                          outline
                           size="sm"
                           className="w-100"
                           disabled={alreadySubscribed}
                           onClick={() => handleNotifyMe(request)}
                         >
-                          🔔 Notify Me
+                          Notify Me!
                         </Button>
                       )}
                     </div>

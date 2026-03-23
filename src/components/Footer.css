@@ -5,6 +5,25 @@
   vertical-align: middle;
 }
 
+.footer-repo-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footer-repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  text-decoration: none;
+}
+
+.footer-repo-link:hover {
+  text-decoration: underline;
+}
+
 .sync-indicator__dot {
   width: 4px;
   height: 4px;

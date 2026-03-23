@@ -297,54 +297,56 @@ const ResultCard = ({
           </p>
         </div>
 
-        <div className="server-pills mt-auto">
-          {isGrouped &&
-            (displayMode === 'library' ? (
-              <div className="single-server-info">
-                {itemType === 'movie' && topResolutions.length > 0 && (
-                  <div className="version-info mt-1">
-                    {topResolutions.map((res, i) => (
-                      <span key={i} className="badge badge-secondary mr-1">
-                        {res}
-                      </span>
-                    ))}
-                    {hasSubtitles && <SubtitlesIcon />}
-                  </div>
-                )}
-              </div>
-            ) : isSingleServer && isGrouped ? (
-              <div className="single-server-info">
-                <span className="badge badge-light text-dark border">
-                  {item.servers[0].name}
-                </span>
-                {itemType === 'movie' && topResolutions.length > 0 && (
-                  <div className="version-info mt-1">
-                    {topResolutions.map((res, i) => (
-                      <span key={i} className="badge badge-secondary mr-1">
-                        {res}
-                      </span>
-                    ))}
-                    {hasSubtitles && <SubtitlesIcon />}
-                  </div>
-                )}
-              </div>
-            ) : isGrouped ? (
-              <>
-                <ServerPills servers={item.servers} />
-                {itemType === 'movie' && topResolutions.length > 0 && (
-                  <div className="version-info mt-1">
-                    {topResolutions.map((res, i) => (
-                      <span key={i} className="badge badge-secondary mr-1">
-                        {res}
-                      </span>
-                    ))}
-                    {hasSubtitles && <SubtitlesIcon />}
-                  </div>
-                )}
-              </>
-            ) : null)}
-          {actionElement}
-        </div>
+        {(isGrouped || actionElement) && (
+          <div className="server-pills mt-auto">
+            {isGrouped &&
+              (displayMode === 'library' ? (
+                <div className="single-server-info">
+                  {itemType === 'movie' && topResolutions.length > 0 && (
+                    <div className="version-info mt-1">
+                      {topResolutions.map((res, i) => (
+                        <span key={i} className="badge badge-secondary mr-1">
+                          {res}
+                        </span>
+                      ))}
+                      {hasSubtitles && <SubtitlesIcon />}
+                    </div>
+                  )}
+                </div>
+              ) : isSingleServer && isGrouped ? (
+                <div className="single-server-info">
+                  <span className="badge badge-light text-dark border">
+                    {item.servers[0].name}
+                  </span>
+                  {itemType === 'movie' && topResolutions.length > 0 && (
+                    <div className="version-info mt-1">
+                      {topResolutions.map((res, i) => (
+                        <span key={i} className="badge badge-secondary mr-1">
+                          {res}
+                        </span>
+                      ))}
+                      {hasSubtitles && <SubtitlesIcon />}
+                    </div>
+                  )}
+                </div>
+              ) : isGrouped ? (
+                <>
+                  <ServerPills servers={item.servers} />
+                  {itemType === 'movie' && topResolutions.length > 0 && (
+                    <div className="version-info mt-1">
+                      {topResolutions.map((res, i) => (
+                        <span key={i} className="badge badge-secondary mr-1">
+                          {res}
+                        </span>
+                      ))}
+                      {hasSubtitles && <SubtitlesIcon />}
+                    </div>
+                  )}
+                </>
+              ) : null)}
+            {actionElement}
+          </div>
+        )}
       </div>
     </div>
   );

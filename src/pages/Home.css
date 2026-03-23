@@ -128,7 +128,6 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.35rem;
-  background-color: rgba(255, 255, 255, 0.9);
   z-index: 2;
   cursor: default;
 }
@@ -140,14 +139,39 @@
 
 .request-status-icon--upgrade {
   color: #0d6efd;
+  background-color: #e0edff;
 }
 
 .request-status-icon--fulfilled {
   color: #198754;
+  background-color: #d1e7dd;
 }
 
 .request-status-icon--new {
-  color: #E11C52;
+  color: #e11c52;
+  background-color: #fce4ec;
+}
+
+.request-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background-color: hsl(200, 20%, 88%);
+  border-radius: 0.25rem;
+}
+
+.request-poster-error {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background-color: hsl(200, 20%, 88%);
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(0, 0%, 55%);
+}
+
+.request-poster-error__icon {
+  font-size: 2.5rem;
 }
 
 @media (hover: hover) {
@@ -164,6 +188,10 @@
 
 .result-link:hover {
   text-decoration: none;
+}
+
+.result-link--request {
+  cursor: pointer;
 }
 
 .card-title {

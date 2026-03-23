@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Alert,
-  Button,
   Collapse,
   FormGroup,
   Label,
@@ -35,8 +34,9 @@ const Home = () => {
   const [contentRatingFilter, setContentRatingFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const [visibleLocalCount, setVisibleLocalCount] = useState(20);
+  const [visibleDiscoverCount, setVisibleDiscoverCount] = useState(20);
+  const itemsPerLoad = 20;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -138,11 +138,10 @@ const Home = () => {
       });
   }, [allResults, filterType, contentRatingFilter, sortField, sortDirection]);
 
-  const totalPages = Math.ceil(displayedResults.length / itemsPerPage);
-  const paginatedResults = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return displayedResults.slice(startIndex, startIndex + itemsPerPage);
-  }, [currentPage, displayedResults]);
+  const visibleLocalResults = useMemo(
+    () => displayedResults.slice(0, visibleLocalCount),
+    [displayedResults, visibleLocalCount]
+  );
 
   const localGuids = useMemo(() => {
     const guids = new Set<string>();
@@ -196,6 +195,11 @@ const Home = () => {
     });
   }, [filteredDiscoverResults, sortField, sortDirection]);
 
+  const visibleDiscoverResults = useMemo(
+    () => sortedFilteredDiscoverResults.slice(0, visibleDiscoverCount),
+    [sortedFilteredDiscoverResults, visibleDiscoverCount]
+  );
+
   const availableContentRatings = useMemo(() => {
     const localRatings = allResults
       .map((item) => item.contentRating)
@@ -207,7 +211,8 @@ const Home = () => {
   }, [allResults, discoverResults]);
 
   useEffect(() => {
-    setCurrentPage(1);
+    setVisibleLocalCount(itemsPerLoad);
+    setVisibleDiscoverCount(itemsPerLoad);
   }, [filterType, contentRatingFilter, sortField, sortDirection, query]);
 
   useEffect(() => {
@@ -289,14 +294,6 @@ const Home = () => {
 
     search();
   }, [debouncedQuery, apiFetch, hasSearched]);
-
-  const handlePageClick = (e: React.MouseEvent, page: number) => {
-    e.preventDefault();
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-      window.scrollTo(0, 0);
-    }
-  };
 
   const FilterControls = () => (
     <div className="filter-controls-container p-3">
@@ -469,7 +466,7 @@ const Home = () => {
               ) : activeTab === 'local' ? (
                 <>
                   <div className="results-grid">
-                    {paginatedResults.map((item) => (
+                    {visibleLocalResults.map((item) => (
                       <Link
                         to={`/media/${item.guid}`}
                         key={item.guid}
@@ -482,52 +479,28 @@ const Home = () => {
                       </Link>
                     ))}
                   </div>
-                  {totalPages > 1 && (
-                    <nav className="d-flex justify-content-center mt-5 mb-5">
-                      <ul className="pagination shadow-sm">
-                        <li
-                          className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}
-                        >
-                          <a
-                            className="page-link"
-                            href="#"
-                            onClick={(e) => handlePageClick(e, currentPage - 1)}
-                          >
-                            &laquo;
-                          </a>
-                        </li>
-                        {[...Array(totalPages)].map((_, i) => (
-                          <li
-                            key={i}
-                            className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
-                          >
-                            <a
-                              className="page-link"
-                              href="#"
-                              onClick={(e) => handlePageClick(e, i + 1)}
-                            >
-                              {i + 1}
-                            </a>
-                          </li>
-                        ))}
-                        <li
-                          className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
-                        >
-                          <a
-                            className="page-link"
-                            href="#"
-                            onClick={(e) => handlePageClick(e, currentPage + 1)}
-                          >
-                            &raquo;
-                          </a>
-                        </li>
-                      </ul>
-                    </nav>
+                  {visibleLocalCount < displayedResults.length && (
+                    <div className="d-flex justify-content-center mt-4 mb-5">
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary"
+                        onClick={() =>
+                          setVisibleLocalCount((prev) =>
+                            Math.min(
+                              prev + itemsPerLoad,
+                              displayedResults.length
+                            )
+                          )
+                        }
+                      >
+                        Load more
+                      </button>
+                    </div>
                   )}
                 </>
               ) : (
                 <div className="results-grid">
-                  {sortedFilteredDiscoverResults.map((item) => {
+                  {visibleDiscoverResults.map((item) => {
                     const plexThumbUrl = item.thumb?.startsWith('/')
                       ? `https://metadata.provider.plex.tv${item.thumb}`
                       : item.thumb;
@@ -535,26 +508,49 @@ const Home = () => {
                       ? `/api/image/global?url=${encodeURIComponent(plexThumbUrl)}`
                       : undefined;
                     return (
-                      <div key={item.ratingKey} className="result-link">
+                      <div
+                        key={item.ratingKey}
+                        role="button"
+                        tabIndex={0}
+                        className="result-link result-link--request"
+                        aria-label={`Request ${item.title}`}
+                        onClick={() => setRequestModalItem(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setRequestModalItem(item);
+                          }
+                        }}
+                      >
                         <ResultCard
                           item={item}
                           hideTypeTag={filterType !== 'all'}
                           imageUrl={thumbUrl}
-                          actionElement={
-                            <Button
-                              color="primary"
-                              className="w-100"
-                              onClick={() => setRequestModalItem(item)}
-                            >
-                              Request
-                            </Button>
-                          }
                         />
                       </div>
                     );
                   })}
                 </div>
               )}
+              {activeTab === 'discover' &&
+                visibleDiscoverCount < sortedFilteredDiscoverResults.length && (
+                  <div className="d-flex justify-content-center mt-4 mb-5">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={() =>
+                        setVisibleDiscoverCount((prev) =>
+                          Math.min(
+                            prev + itemsPerLoad,
+                            sortedFilteredDiscoverResults.length
+                          )
+                        )
+                      }
+                    >
+                      Load more
+                    </button>
+                  </div>
+                )}
             </>
           )}
           {hasSearched &&

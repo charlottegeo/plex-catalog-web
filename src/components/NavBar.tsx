@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Collapse,
   Container,
@@ -19,6 +19,7 @@ const NavBar: React.FunctionComponent<NavBarProps> = ({ onHomeClick }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const apiFetch = useApiFetch();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -34,12 +35,23 @@ const NavBar: React.FunctionComponent<NavBarProps> = ({ onHomeClick }) => {
     return () => clearInterval(interval);
   }, [apiFetch]);
 
+  useEffect(() => {
+    if (location.pathname === '/requests') {
+      setUnreadCount(0);
+    }
+  }, [location.pathname]);
+
   const toggle = () => {
     setIsOpen(!isOpen);
   };
 
   const handleHomeClick = () => {
+    setUnreadCount(0);
     onHomeClick?.();
+  };
+
+  const handleNavClick = () => {
+    setUnreadCount(0);
   };
 
   return (
@@ -58,7 +70,11 @@ const NavBar: React.FunctionComponent<NavBarProps> = ({ onHomeClick }) => {
                 </NavLink>
               </NavItem>
               <NavItem>
-                <NavLink to="/servers" className="nav-link">
+                <NavLink
+                  to="/servers"
+                  className="nav-link"
+                  onClick={handleNavClick}
+                >
                   Servers
                 </NavLink>
               </NavItem>
@@ -66,14 +82,15 @@ const NavBar: React.FunctionComponent<NavBarProps> = ({ onHomeClick }) => {
                 <NavLink
                   to="/requests"
                   className="nav-link d-flex align-items-center"
+                  onClick={handleNavClick}
                 >
                   Requests
                   {unreadCount > 0 && (
                     <span
-                      className="badge badge-danger rounded-circle ml-2"
+                      className="badge badge-warning rounded-circle ml-2"
                       style={{
-                        width: '10px',
-                        height: '10px',
+                        width: '12px',
+                        height: '12px',
                         padding: 0,
                         display: 'inline-block',
                       }}

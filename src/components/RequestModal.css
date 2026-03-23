@@ -6,3 +6,77 @@
 .request-modal-season-cb .custom-control-label::after {
   left: -1.5rem;
 }
+
+/* Same dot animation as footer sync indicator */
+.request-modal-seasons-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.request-modal-seasons-loading__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: request-modal-sync-dot-bounce 1.4s ease-in-out infinite both;
+}
+
+.request-modal-seasons-loading__dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.request-modal-seasons-loading__dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes request-modal-sync-dot-bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.request-modal-submit-alert {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2000;
+  width: auto;
+  max-width: calc(100vw - 2rem);
+}
+
+.request-modal-submit-alert__alert {
+  position: relative;
+  padding-right: 2.5rem;
+}
+
+.request-modal-submit-alert__close {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.5rem;
+  background-color: #ffffff;
+  border: none;
+  border-radius: 0.25rem;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  opacity: 1;
+  color: #212529;
+}
+
+.request-modal-submit-alert__close:hover {
+  opacity: 0.9;
+}

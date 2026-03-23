@@ -39,14 +39,14 @@ const LibraryPage = () => {
   const [contentRatingFilter, setContentRatingFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const [visibleCount, setVisibleCount] = useState(20);
+  const itemsPerLoad = 20;
   const [filtersOpen, setFiltersOpen] = useState(true);
 
   const apiFetch = useApiFetch();
 
   useEffect(() => {
-    setCurrentPage(1);
+    setVisibleCount(itemsPerLoad);
   }, [contentRatingFilter, sortField, sortDirection]);
 
   useEffect(() => {
@@ -134,19 +134,10 @@ const LibraryPage = () => {
       });
   }, [items, contentRatingFilter, sortField, sortDirection]);
 
-  const totalPages = Math.ceil(sortedItems.length / itemsPerPage);
-  const paginatedItems = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sortedItems.slice(start, start + itemsPerPage);
-  }, [sortedItems, currentPage]);
-
-  const handlePageClick = (e: React.MouseEvent, page: number) => {
-    e.preventDefault();
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-      window.scrollTo(0, 0);
-    }
-  };
+  const visibleItems = useMemo(
+    () => sortedItems.slice(0, visibleCount),
+    [sortedItems, visibleCount]
+  );
 
   const FilterControls = () => (
     <div className="filter-controls-container p-3">
@@ -260,7 +251,7 @@ const LibraryPage = () => {
               ? Array.from({ length: 18 }).map((_, i) => (
                   <ResultCardSkeleton key={i} />
                 ))
-              : paginatedItems.map((item) => (
+              : visibleItems.map((item) => (
                   <Link
                     to={`/media/${item.guid}`}
                     key={item.guid}
@@ -271,70 +262,23 @@ const LibraryPage = () => {
                   </Link>
                 ))}
           </div>
+          {!loading && visibleCount < sortedItems.length && (
+            <div className="d-flex justify-content-center mt-4 mb-5">
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={() =>
+                  setVisibleCount((prev) =>
+                    Math.min(prev + itemsPerLoad, sortedItems.length)
+                  )
+                }
+              >
+                Load more
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {!loading && totalPages > 1 && (
-        <nav className="d-flex justify-content-center mt-5 mb-5">
-          <ul className="pagination shadow-sm">
-            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-              <a
-                className="page-link"
-                href="#"
-                onClick={(e) => handlePageClick(e, currentPage - 1)}
-              >
-                &laquo;
-              </a>
-            </li>
-            {[...Array(totalPages)].map((_, i) => {
-              const pageNum = i + 1;
-              if (
-                pageNum === 1 ||
-                pageNum === totalPages ||
-                Math.abs(pageNum - currentPage) <= 2
-              ) {
-                return (
-                  <li
-                    key={pageNum}
-                    className={`page-item ${currentPage === pageNum ? 'active' : ''}`}
-                  >
-                    <a
-                      className="page-link"
-                      href="#"
-                      onClick={(e) => handlePageClick(e, pageNum)}
-                    >
-                      {pageNum}
-                    </a>
-                  </li>
-                );
-              } else if (
-                pageNum === currentPage - 3 ||
-                pageNum === currentPage + 3
-              ) {
-                return (
-                  <li key={pageNum} className="page-item disabled">
-                    <a className="page-link" href="#">
-                      ...
-                    </a>
-                  </li>
-                );
-              }
-              return null;
-            })}
-            <li
-              className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
-            >
-              <a
-                className="page-link"
-                href="#"
-                onClick={(e) => handlePageClick(e, currentPage + 1)}
-              >
-                &raquo;
-              </a>
-            </li>
-          </ul>
-        </nav>
-      )}
     </div>
   );
 };
