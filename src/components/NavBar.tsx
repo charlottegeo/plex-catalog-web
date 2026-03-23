@@ -31,9 +31,7 @@ const NavBar: React.FunctionComponent<NavBarProps> = ({ onHomeClick }) => {
       }
     };
     fetchCount();
-    const interval = setInterval(fetchCount, 60000);
-    return () => clearInterval(interval);
-  }, [apiFetch]);
+  }, [apiFetch, location.pathname]);
 
   useEffect(() => {
     if (location.pathname === '/requests') {
