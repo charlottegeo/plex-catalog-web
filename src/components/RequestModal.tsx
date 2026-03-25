@@ -393,7 +393,7 @@ const RequestModal = ({
 
                 {itemType === 'show' && allSeasonsExist && (
                   <div className="mt-2">
-                    All available seasons are already on Plex.
+                    All existing seasons are available on Plex.
                   </div>
                 )}
 
