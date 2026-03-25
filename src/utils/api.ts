@@ -13,6 +13,19 @@ type ApiFetch = (
   init?: RequestInit
 ) => Promise<Response>;
 
+export function parseItemsArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw;
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    'items' in raw &&
+    Array.isArray((raw as { items: unknown }).items)
+  ) {
+    return (raw as { items: T[] }).items;
+  }
+  return [];
+}
+
 export function useApiFetch(): ApiFetch {
   const useOidcAccessTokenHook = getUseOidcAccessToken();
   const { accessToken } = useOidcAccessTokenHook();
@@ -73,13 +86,18 @@ export const fetchExtras = async (
 
 export const searchDiscover = async (
   apiFetch: ApiFetch,
-  query: string
+  query: string,
+  limit?: number,
+  offset?: number
 ): Promise<DiscoverResult[]> => {
-  const response = await apiFetch(
-    `/api/discover?q=${encodeURIComponent(query)}`
-  );
+  const params = new URLSearchParams({ q: query });
+  if (typeof limit === 'number') params.set('limit', String(limit));
+  if (typeof offset === 'number') params.set('offset', String(offset));
+  const response = await apiFetch(`/api/discover?${params.toString()}`);
   if (!response.ok) return [];
   const data = await response.json();
+  const paginated = parseItemsArray<DiscoverResult>(data);
+  if (paginated.length > 0) return paginated;
   return (
     (data as { MediaContainer?: { Metadata?: DiscoverResult[] } })
       ?.MediaContainer?.Metadata ?? []
@@ -104,7 +122,7 @@ export const fetchMediaRequests = async (
 ): Promise<MediaRequest[]> => {
   const response = await apiFetch('/api/requests');
   if (!response.ok) throw new Error('Failed to fetch requests');
-  return response.json();
+  return parseItemsArray<MediaRequest>(await response.json());
 };
 
 export const deleteMediaRequest = async (
@@ -118,17 +136,33 @@ export const deleteMediaRequest = async (
   return response.text();
 };
 
-export const fetchNotificationCount = async (
-  apiFetch: ApiFetch
-): Promise<number> => {
-  const response = await apiFetch('/api/requests/notifications/count');
-  if (!response.ok) return 0;
-  const data = await response.json();
-  return (data as { count?: number }).count ?? 0;
+export const fetchActiveRequestsByGuid = async (
+  apiFetch: ApiFetch,
+  guid: string
+): Promise<MediaRequest[]> => {
+  const response = await apiFetch(
+    `/api/requests/media/${encodeURIComponent(guid)}`
+  );
+  if (!response.ok) return [];
+  return parseItemsArray<MediaRequest>(await response.json());
 };
 
-export const clearNotifications = async (apiFetch: ApiFetch): Promise<void> => {
-  await apiFetch('/api/requests/notifications/clear', {
+export const subscribeToRequest = async (
+  apiFetch: ApiFetch,
+  id: number
+): Promise<void> => {
+  const response = await apiFetch(`/api/requests/${id}/subscribe`, {
     method: 'POST',
   });
+  if (!response.ok) throw new Error('Failed to subscribe');
+};
+
+export const unsubscribeFromRequest = async (
+  apiFetch: ApiFetch,
+  id: number
+): Promise<void> => {
+  const response = await apiFetch(`/api/requests/${id}/subscribe`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to unsubscribe');
 };

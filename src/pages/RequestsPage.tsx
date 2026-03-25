@@ -11,24 +11,66 @@ import { SSOEnabled } from '../configuration';
 import { getUseOidcAccessToken, NoSSOUserInfo } from '../SSODisabledDefaults';
 import type { MediaRequest } from '../types';
 import {
-  clearNotifications,
-  deleteMediaRequest,
   fetchMediaRequests,
-  submitMediaRequest,
+  subscribeToRequest,
+  unsubscribeFromRequest,
   useApiFetch,
 } from '../utils/api';
-import { formatDuration } from '../utils/formatting';
+import {
+  formatDuration,
+  formatResolution,
+  formatSubscriberList,
+} from '../utils/formatting';
 import './Home.css';
 
 type TabType = 'pending' | 'fulfilled';
 
-const MAX_USERNAME_LENGTH = 20;
+type GroupedMedia = {
+  guid: string;
+  requests: MediaRequest[];
+};
 
-function formatRequestedBy(username: string): string {
-  if (username.length <= MAX_USERNAME_LENGTH) return username;
-  const truncated = username.slice(0, MAX_USERNAME_LENGTH);
-  const remaining = username.length - MAX_USERNAME_LENGTH;
-  return `${truncated} +${remaining}`;
+function sortRequestsInGroup(items: MediaRequest[]): MediaRequest[] {
+  return [...items].sort((a, b) => {
+    if (a.itemType === 'movie' && b.itemType === 'movie') {
+      const ra = (a.requestedResolution ?? '').toLowerCase();
+      const rb = (b.requestedResolution ?? '').toLowerCase();
+      return ra.localeCompare(rb);
+    }
+    if (a.itemType === 'show' && b.itemType === 'show') {
+      return (a.requestedSeason ?? 0) - (b.requestedSeason ?? 0);
+    }
+    return a.itemType.localeCompare(b.itemType);
+  });
+}
+
+function groupRequestsByGuid(requests: MediaRequest[]): GroupedMedia[] {
+  const map = new Map<string, MediaRequest[]>();
+  for (const r of requests) {
+    const list = map.get(r.guid) ?? [];
+    list.push(r);
+    map.set(r.guid, list);
+  }
+  return Array.from(map.entries())
+    .map(([guid, items]) => ({
+      guid,
+      requests: sortRequestsInGroup(items),
+    }))
+    .sort((a, b) =>
+      (a.requests[0]?.title ?? '').localeCompare(b.requests[0]?.title ?? '')
+    );
+}
+
+function rowLabel(req: MediaRequest): string {
+  if (req.itemType === 'movie') {
+    const res = req.requestedResolution?.trim();
+    if (!res) return 'Any resolution';
+    return formatResolution(res);
+  }
+  if (req.requestedSeason != null && req.requestedSeason > 0) {
+    return `Season ${req.requestedSeason}`;
+  }
+  return 'Show';
 }
 
 type RequestThumbnailProps = {
@@ -137,11 +179,6 @@ const RequestsPage = () => {
     const init = async () => {
       setLoading(true);
       setError(null);
-      try {
-        await clearNotifications(apiFetch);
-      } catch {
-        console.error('Failed to clear notifications');
-      }
       await loadRequests();
     };
     init();
@@ -154,26 +191,14 @@ const RequestsPage = () => {
     return requests.filter((r) => r.status.toLowerCase() !== 'pending');
   }, [requests, activeTab]);
 
-  const userHasPendingForGuid = (guid: string) =>
-    requests.some(
-      (r) =>
-        r.guid === guid &&
-        r.username === currentUsername &&
-        r.status.toLowerCase() === 'pending'
-    );
+  const groupedMedia = useMemo(
+    () => groupRequestsByGuid(filteredRequests),
+    [filteredRequests]
+  );
 
-  const handleNotifyMe = async (req: MediaRequest) => {
+  const handleSubscribe = async (requestId: number) => {
     try {
-      await submitMediaRequest(apiFetch, {
-        guid: req.guid,
-        title: req.title,
-        itemType: req.itemType,
-        requestedSeasons: req.requestedSeasons ?? undefined,
-        requestedResolution: req.requestedResolution ?? undefined,
-        thumb: req.thumb ?? undefined,
-        year: req.year ?? undefined,
-        duration: req.duration ?? undefined,
-      });
+      await subscribeToRequest(apiFetch, requestId);
       await loadRequests();
     } catch (e) {
       window.alert(
@@ -182,19 +207,29 @@ const RequestsPage = () => {
     }
   };
 
-  const handleCancel = async (id: number) => {
+  const handleUnsubscribe = async (requestId: number) => {
+    const shouldUnsub = window.confirm(
+      'Are you sure you want to unsubscribe from this request?'
+    );
+    if (!shouldUnsub) return;
+
     try {
-      await deleteMediaRequest(apiFetch, id);
-      setRequests((prev) => prev.filter((r) => r.id !== id));
+      await unsubscribeFromRequest(apiFetch, requestId);
+      await loadRequests();
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Failed to delete request');
+      window.alert(
+        e instanceof Error ? e.message : 'Failed to unsubscribe from request'
+      );
     }
   };
+
+  const isUserSubscribed = (subscribers: string[]) =>
+    currentUsername !== '' && subscribers.includes(currentUsername);
 
   return (
     <div className="container mt-4">
       {error && (
-        <Alert color="danger" toggle={() => setError(null)}>
+        <Alert color="danger" fade={false} toggle={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -212,12 +247,6 @@ const RequestsPage = () => {
             }}
           >
             Pending
-            {/*(  //commented out because I'm not sure if the number makes it look like a notification
-            {
-              requests.filter((r) => r.status.toLowerCase() === 'pending')
-                .length
-            }
-            ) */}
           </NavLink>
         </NavItem>
         <NavItem>
@@ -230,12 +259,6 @@ const RequestsPage = () => {
             }}
           >
             Fulfilled
-            {/*(  //commented out because I'm not sure if the number makes it look like a notification
-            {
-              requests.filter((r) => r.status.toLowerCase() !== 'pending')
-                .length
-            }
-            ) */}
           </NavLink>
         </NavItem>
       </Nav>
@@ -246,29 +269,27 @@ const RequestsPage = () => {
         </div>
       ) : (
         <div className="results-grid">
-          {filteredRequests.map((request) => {
-            const plexThumbUrl = request.thumb?.startsWith('/')
-              ? `https://metadata.provider.plex.tv${request.thumb}`
-              : (request.thumb ?? undefined);
-            const thumbUrl = plexThumbUrl
-              ? `/api/image/global?url=${encodeURIComponent(plexThumbUrl)}`
-              : undefined;
-            const isOwnRequest = request.username === currentUsername;
-            const alreadySubscribed = userHasPendingForGuid(request.guid);
-            const isFulfilled = request.status.toLowerCase() === 'fulfilled';
-            const mediaPath = `/media/${request.guid.replace('plex://', '')}`;
+          {groupedMedia.map((group) => {
+            const first = group.requests[0];
+            const plexThumbUrl = first.thumb?.startsWith('/')
+              ? `https://metadata.provider.plex.tv${first.thumb}`
+              : (first.thumb ?? undefined);
+            const thumbUrl = plexThumbUrl;
+            const isFulfilled = first.status.toLowerCase() === 'fulfilled';
+            const mediaPath = `/media/${first.guid.replace('plex://', '')}`;
+            const anyUpgrade = group.requests.some((r) => r.isUpgrade);
 
             const cardContent = (
               <div className="position-relative d-flex flex-column h-100">
-                {request.thumb ? (
+                {first.thumb ? (
                   thumbUrl ? (
-                    <RequestThumbnail src={thumbUrl} alt={request.title} />
+                    <RequestThumbnail src={thumbUrl} alt={first.title} />
                   ) : (
                     <div
                       className="card-img-top bg-secondary d-flex align-items-center justify-content-center text-white"
                       style={{ aspectRatio: '2/3', minHeight: 140 }}
                     >
-                      {request.itemType === 'movie' ? 'Movie' : 'Show'}
+                      {first.itemType === 'movie' ? 'Movie' : 'Show'}
                     </div>
                   )
                 ) : (
@@ -276,28 +297,24 @@ const RequestsPage = () => {
                     className="card-img-top bg-secondary d-flex align-items-center justify-content-center text-white"
                     style={{ aspectRatio: '2/3', minHeight: 140 }}
                   >
-                    {request.itemType === 'movie' ? 'Movie' : 'Show'}
+                    {first.itemType === 'movie' ? 'Movie' : 'Show'}
                   </div>
                 )}
                 <span
                   className={`request-status-icon request-status-icon--${
-                    isFulfilled
-                      ? 'fulfilled'
-                      : request.isUpgrade
-                        ? 'upgrade'
-                        : 'new'
+                    isFulfilled ? 'fulfilled' : anyUpgrade ? 'upgrade' : 'new'
                   }`}
                   title={
                     isFulfilled
                       ? 'Fulfilled'
-                      : request.isUpgrade
+                      : anyUpgrade
                         ? 'Upgrade request'
                         : 'New request'
                   }
                 >
                   {isFulfilled ? (
                     <CheckIcon />
-                  ) : request.isUpgrade ? (
+                  ) : anyUpgrade ? (
                     <UpgradeIcon />
                   ) : (
                     <NewIcon />
@@ -305,106 +322,100 @@ const RequestsPage = () => {
                 </span>
                 <div className="card-body p-2 d-flex flex-column flex-grow-1">
                   <h3 className="card-title h6 mb-1 text-dark">
-                    {request.title}
+                    {first.title}
                   </h3>
                   {isFulfilled && (
-                    <small className="d-block text-muted mb-1">
+                    <small className="d-block text-muted mb-2">
                       Available on:{' '}
-                      {request.serverNames?.join(', ') || 'Unknown Server'}
+                      {[
+                        ...new Set(
+                          group.requests.flatMap((r) => r.serverNames ?? [])
+                        ),
+                      ].join(', ') || 'Unknown Server'}
                     </small>
                   )}
                   <p
-                    className="card-year text-muted small mb-1 d-flex align-items-center flex-wrap"
+                    className="card-year text-muted small mb-2 d-flex align-items-center flex-wrap"
                     style={{ gap: '0.5rem' }}
                   >
-                    {request.year != null && <span>{request.year}</span>}
-                    {(request as { contentRating?: string }).contentRating && (
+                    {first.year != null && <span>{first.year}</span>}
+                    {(first as { contentRating?: string }).contentRating && (
                       <span>
-                        {(request as { contentRating?: string }).contentRating}
+                        {(first as { contentRating?: string }).contentRating}
                       </span>
                     )}
-                    {request.duration != null && (
-                      <span>{formatDuration(request.duration)}</span>
+                    {first.duration != null && (
+                      <span>{formatDuration(first.duration)}</span>
                     )}
-                    {request.itemType === 'show' &&
-                      (request as { childCount?: number }).childCount !=
-                        null && (
+                    {first.itemType === 'show' &&
+                      (first as { childCount?: number }).childCount != null && (
                         <span>
-                          {(request as { childCount?: number }).childCount}{' '}
-                          Season
-                          {(request as { childCount?: number }).childCount === 1
+                          {(first as { childCount?: number }).childCount} Season
+                          {(first as { childCount?: number }).childCount === 1
                             ? ''
                             : 's'}
                         </span>
                       )}
                   </p>
-                  <div className="mb-1">
-                    <span className="badge badge-light border text-dark">
-                      Requested by: {formatRequestedBy(request.username)}
-                    </span>
-                  </div>
-                  {request.requestedResolution && (
-                    <div className="mb-1">
-                      <span className="badge badge-info">
-                        {request.requestedResolution}
-                      </span>
-                    </div>
-                  )}
-                  {request.requestedSeasons &&
-                    request.requestedSeasons.length > 0 && (
+
+                  <div className="request-group-rows mt-auto">
+                    {group.requests.map((req) => (
                       <div
-                        className="d-flex flex-wrap mb-2"
-                        style={{ gap: '0.35rem' }}
+                        key={req.id}
+                        className="request-group-row border rounded p-2 mb-2 bg-light"
                       >
-                        {request.requestedSeasons.map((seasonNum) => (
-                          <span
-                            key={seasonNum}
-                            className="badge badge-light border text-dark"
-                            title={`Season ${seasonNum}`}
-                          >
-                            S{seasonNum}
-                          </span>
-                        ))}
+                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                          <div className="d-flex flex-wrap align-items-center gap-2">
+                            <span className="badge badge-info">
+                              {rowLabel(req)}
+                            </span>
+                            <span className="small text-muted">
+                              Requested by:{' '}
+                              <span className="text-dark">
+                                {formatSubscriberList(req.subscribers ?? [])}
+                              </span>
+                            </span>
+                          </div>
+                          {activeTab === 'pending' && (
+                            <div className="flex-shrink-0">
+                              {isUserSubscribed(req.subscribers ?? []) ? (
+                                <Button
+                                  color="danger"
+                                  size="sm"
+                                  outline
+                                  onClick={() => handleUnsubscribe(req.id)}
+                                >
+                                  Unsubscribe
+                                </Button>
+                              ) : (
+                                <Button
+                                  color="primary"
+                                  size="sm"
+                                  onClick={() => handleSubscribe(req.id)}
+                                >
+                                  Notify Me
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  {activeTab === 'pending' && (
-                    <div className="mt-auto">
-                      {isOwnRequest ? (
-                        <Button
-                          color="danger"
-                          size="sm"
-                          className="w-100"
-                          onClick={() => handleCancel(request.id)}
-                        >
-                          Cancel Request
-                        </Button>
-                      ) : (
-                        <Button
-                          color="primary"
-                          size="sm"
-                          className="w-100"
-                          disabled={alreadySubscribed}
-                          onClick={() => handleNotifyMe(request)}
-                        >
-                          Notify Me!
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               </div>
             );
 
             return isFulfilled ? (
               <Link
-                key={request.id}
+                key={group.guid}
                 to={mediaPath}
                 className="result-link text-decoration-none"
               >
                 <div className="card result-card h-100">{cardContent}</div>
               </Link>
             ) : (
-              <div key={request.id} className="card result-card h-100">
+              <div key={group.guid} className="card result-card h-100">
                 {cardContent}
               </div>
             );
@@ -412,7 +423,7 @@ const RequestsPage = () => {
         </div>
       )}
 
-      {!loading && filteredRequests.length === 0 && (
+      {!loading && groupedMedia.length === 0 && (
         <p className="text-muted">No {activeTab} requests.</p>
       )}
     </div>

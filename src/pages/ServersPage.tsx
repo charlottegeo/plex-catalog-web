@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useApiFetch } from '../utils/api';
+import { useEffect, useState } from 'react';
 import { Alert, Spinner } from 'reactstrap';
-import { DbServer, Library } from '../types';
 import ServerItem from '../components/ServerItem';
+import { DbServer, Library } from '../types';
+import { parseItemsArray, useApiFetch } from '../utils/api';
 import './ServersPage.css';
 
 const ServersPage = () => {
@@ -47,7 +47,7 @@ const ServersPage = () => {
       try {
         const response = await apiFetch(`/api/servers/${serverId}/libraries`);
         if (!response.ok) throw new Error('Failed to fetch libraries');
-        const data = (await response.json()) as Library[];
+        const data = parseItemsArray<Library>(await response.json());
         setLibraries((prev) => ({ ...prev, [serverId]: data }));
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Error loading libraries');
@@ -61,7 +61,7 @@ const ServersPage = () => {
   return (
     <div className="container mt-4">
       {error && (
-        <Alert color="danger" toggle={() => setError(null)}>
+        <Alert color="danger" fade={false} toggle={() => setError(null)}>
           {error}
         </Alert>
       )}

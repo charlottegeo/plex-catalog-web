@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -7,11 +7,20 @@ import {
   ModalFooter,
   ModalHeader,
 } from 'reactstrap';
-import type { MediaDetails } from '../types';
-import { submitMediaRequest } from '../utils/api';
+import { SSOEnabled } from '../configuration';
+import { getUseOidcAccessToken, NoSSOUserInfo } from '../SSODisabledDefaults';
+import type { MediaDetails, MediaRequest } from '../types';
 import {
-  REQUEST_RESOLUTION_TIERS,
+  fetchActiveRequestsByGuid,
+  submitMediaRequest,
+  subscribeToRequest,
+  unsubscribeFromRequest,
+} from '../utils/api';
+import {
+  formatResolution,
+  formatSubscriberList,
   parseVideoResolutionTier,
+  REQUEST_RESOLUTION_TIERS,
 } from '../utils/formatting';
 import './RequestModal.css';
 
@@ -48,6 +57,19 @@ type SubmitAlert = {
   message: string;
 };
 
+function moviePendingMatchesSelection(
+  r: MediaRequest,
+  selectedResolution: string
+): boolean {
+  if (r.itemType !== 'movie' || r.status.toLowerCase() !== 'pending') {
+    return false;
+  }
+  if (selectedResolution === 'any') {
+    return !r.requestedResolution || r.requestedResolution === 'any';
+  }
+  return formatResolution(r.requestedResolution ?? '') === selectedResolution;
+}
+
 const RequestModal = ({
   isOpen,
   toggle,
@@ -66,9 +88,55 @@ const RequestModal = ({
   const [existingMovieResolutions, setExistingMovieResolutions] = useState<
     string[]
   >([]);
+  const [pendingRequests, setPendingRequests] = useState<MediaRequest[]>([]);
+  const [loadingPendingRequests, setLoadingPendingRequests] = useState(false);
+
+  const { accessTokenPayload } = getUseOidcAccessToken()();
+  const userInfo = SSOEnabled
+    ? (accessTokenPayload as { preferred_username?: string })
+    : NoSSOUserInfo;
+  const currentUsername = userInfo?.preferred_username ?? '';
 
   const guid = item && 'ratingKey' in item ? item.ratingKey : item?.guid;
   const itemType = item && 'type' in item ? item.type : item?.itemType;
+
+  const refreshPendingRequests = useCallback(async () => {
+    if (!guid) return;
+    try {
+      const list = await fetchActiveRequestsByGuid(apiFetch, guid);
+      setPendingRequests(
+        list.filter((r) => r.status.toLowerCase() === 'pending')
+      );
+    } catch {
+      setPendingRequests([]);
+    }
+  }, [apiFetch, guid]);
+
+  useEffect(() => {
+    if (!isOpen || !guid) {
+      setPendingRequests([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingPendingRequests(true);
+    (async () => {
+      try {
+        const list = await fetchActiveRequestsByGuid(apiFetch, guid);
+        if (!cancelled) {
+          setPendingRequests(
+            list.filter((r) => r.status.toLowerCase() === 'pending')
+          );
+        }
+      } catch {
+        if (!cancelled) setPendingRequests([]);
+      } finally {
+        if (!cancelled) setLoadingPendingRequests(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, guid, apiFetch]);
 
   useEffect(() => {
     let isMounted = true;
@@ -231,21 +299,101 @@ const RequestModal = ({
     };
   }, [isOpen, itemType, guid, isUpgrade, apiFetch]);
 
+  const pendingMovieMatch = useMemo(() => {
+    if (itemType !== 'movie') return undefined;
+    return pendingRequests.find((r) =>
+      moviePendingMatchesSelection(r, resolution)
+    );
+  }, [pendingRequests, itemType, resolution]);
+
+  const getPendingSeasonRequest = (season: number) =>
+    pendingRequests.find(
+      (r) =>
+        r.itemType === 'show' &&
+        r.requestedSeason === season &&
+        r.status.toLowerCase() === 'pending'
+    );
+
+  const isUserInSubscribers = (subscribers: string[]) =>
+    currentUsername !== '' && subscribers.includes(currentUsername);
+
+  const movieDuplicateBlocked = itemType === 'movie' && !!pendingMovieMatch;
+
+  const seasonsEligibleForSubmit = selectedSeasons.filter(
+    (s) => !getPendingSeasonRequest(s)
+  );
+
   const isSubmitDisabled =
     submitting ||
-    (isUpgrade && resolution === 'any' && selectedSeasons.length === 0);
+    movieDuplicateBlocked ||
+    (isUpgrade && resolution === 'any' && selectedSeasons.length === 0) ||
+    (itemType === 'show' &&
+      selectedSeasons.length > 0 &&
+      seasonsEligibleForSubmit.length === 0);
+
+  const handleSubscribeRow = async (requestId: number) => {
+    try {
+      await subscribeToRequest(apiFetch, requestId);
+      await refreshPendingRequests();
+      setSubmitAlert({
+        type: 'success',
+        message: 'You will be notified when this is available.',
+      });
+      onSuccess?.();
+    } catch (err) {
+      setSubmitAlert({
+        type: 'danger',
+        message:
+          err instanceof Error ? err.message : 'Failed to subscribe to request',
+      });
+    }
+  };
+
+  const handleUnsubscribeRow = async (requestId: number) => {
+    if (!window.confirm('Unsubscribe from this request?')) return;
+    try {
+      await unsubscribeFromRequest(apiFetch, requestId);
+      await refreshPendingRequests();
+      setSubmitAlert({ type: 'success', message: 'Unsubscribed.' });
+      onSuccess?.();
+    } catch (err) {
+      setSubmitAlert({
+        type: 'danger',
+        message: err instanceof Error ? err.message : 'Failed to unsubscribe',
+      });
+    }
+  };
+
+  const handleMovieRowAction = () => {
+    if (!pendingMovieMatch) return;
+    if (isUserInSubscribers(pendingMovieMatch.subscribers ?? [])) {
+      void handleUnsubscribeRow(pendingMovieMatch.id);
+    } else {
+      void handleSubscribeRow(pendingMovieMatch.id);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitDisabled || !item || !guid || !itemType) return;
+    if (
+      isSubmitDisabled ||
+      !item ||
+      !guid ||
+      !itemType ||
+      movieDuplicateBlocked
+    )
+      return;
 
     setSubmitting(true);
     try {
       const requestedResolution = resolution === 'any' ? null : resolution;
 
-      let requestedSeasons: number[] | null = null;
+      let reqSeasons: number[] | null = null;
       if (itemType === 'show' && selectedSeasons.length > 0) {
-        requestedSeasons = selectedSeasons;
+        const eligible = selectedSeasons.filter(
+          (s) => !getPendingSeasonRequest(s)
+        );
+        reqSeasons = eligible.length > 0 ? eligible : null;
       }
       const thumb: string | null | undefined =
         item && 'thumbPath' in item
@@ -256,11 +404,12 @@ const RequestModal = ({
         title: item.title,
         itemType,
         requestedResolution,
-        requestedSeasons,
+        requestedSeasons: reqSeasons,
         thumb,
         year: (item as { year?: number })?.year ?? undefined,
         duration: (item as { duration?: number })?.duration ?? undefined,
       });
+      await refreshPendingRequests();
       setSubmitAlert({
         type: 'success',
         message: 'Request submitted successfully!',
@@ -285,6 +434,7 @@ const RequestModal = ({
     setAvailableSeasons([]);
     setIsLoadingSeasons(false);
     setAllSeasonsExist(false);
+    setPendingRequests([]);
     toggle();
   };
 
@@ -308,6 +458,9 @@ const RequestModal = ({
           <form onSubmit={handleSubmit}>
             <ModalBody>
               <>
+                {loadingPendingRequests && (
+                  <p className="small text-muted mb-2">Loading requests…</p>
+                )}
                 <div className="form-group">
                   <label htmlFor="resolution">Resolution</label>
                   <select
@@ -324,6 +477,19 @@ const RequestModal = ({
                     ))}
                   </select>
                 </div>
+                {itemType === 'movie' && pendingMovieMatch && (
+                  <div className="alert alert-info py-2 px-3 mb-3">
+                    <div className="small font-weight-bold mb-1">
+                      This resolution is already requested.
+                    </div>
+                    <div className="small text-muted mb-2">
+                      Requested by:{' '}
+                      {formatSubscriberList(
+                        pendingMovieMatch.subscribers ?? []
+                      )}
+                    </div>
+                  </div>
+                )}
                 <p
                   className="mt-3 mb-0 text-muted"
                   style={{ fontStyle: 'italic', fontSize: '0.85rem' }}
@@ -345,40 +511,87 @@ const RequestModal = ({
                         <span className="request-modal-seasons-loading__dot" />
                       </div>
                     ) : availableSeasons.length > 0 ? (
-                      <div className="d-flex flex-wrap mt-1">
-                        {availableSeasons.map((seasonNum) => (
-                          <div
-                            key={seasonNum}
-                            className="request-modal-season-cb custom-control custom-checkbox mr-3 mb-2"
-                          >
-                            <input
-                              className="custom-control-input"
-                              type="checkbox"
-                              id={`season-${seasonNum}`}
-                              checked={selectedSeasons.includes(seasonNum)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedSeasons([
-                                    ...selectedSeasons,
-                                    seasonNum,
-                                  ]);
-                                } else {
-                                  setSelectedSeasons(
-                                    selectedSeasons.filter(
-                                      (s) => s !== seasonNum
-                                    )
-                                  );
-                                }
-                              }}
-                            />
-                            <label
-                              className="custom-control-label"
-                              htmlFor={`season-${seasonNum}`}
+                      <div className="d-flex flex-column mt-1">
+                        {availableSeasons.map((seasonNum) => {
+                          const pending = getPendingSeasonRequest(seasonNum);
+                          if (pending) {
+                            return (
+                              <div
+                                key={seasonNum}
+                                className="d-flex flex-wrap align-items-center justify-content-between gap-2 border rounded p-2 mb-2 bg-light"
+                              >
+                                <span className="font-weight-bold small">
+                                  Season {seasonNum}
+                                </span>
+                                <span className="small text-muted flex-grow-1">
+                                  Requested by:{' '}
+                                  {formatSubscriberList(
+                                    pending.subscribers ?? []
+                                  )}
+                                </span>
+                                {isUserInSubscribers(
+                                  pending.subscribers ?? []
+                                ) ? (
+                                  <Button
+                                    color="danger"
+                                    size="sm"
+                                    outline
+                                    type="button"
+                                    onClick={() =>
+                                      handleUnsubscribeRow(pending.id)
+                                    }
+                                  >
+                                    Unsubscribe
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    color="primary"
+                                    size="sm"
+                                    type="button"
+                                    onClick={() =>
+                                      handleSubscribeRow(pending.id)
+                                    }
+                                  >
+                                    Notify Me
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          }
+                          return (
+                            <div
+                              key={seasonNum}
+                              className="request-modal-season-cb custom-control custom-checkbox mr-3 mb-2"
                             >
-                              Season {seasonNum}
-                            </label>
-                          </div>
-                        ))}
+                              <input
+                                className="custom-control-input"
+                                type="checkbox"
+                                id={`season-${seasonNum}`}
+                                checked={selectedSeasons.includes(seasonNum)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedSeasons([
+                                      ...selectedSeasons,
+                                      seasonNum,
+                                    ]);
+                                  } else {
+                                    setSelectedSeasons(
+                                      selectedSeasons.filter(
+                                        (s) => s !== seasonNum
+                                      )
+                                    );
+                                  }
+                                }}
+                              />
+                              <label
+                                className="custom-control-label"
+                                htmlFor={`season-${seasonNum}`}
+                              >
+                                Season {seasonNum}
+                              </label>
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-muted small">Loading...</div>
@@ -386,6 +599,8 @@ const RequestModal = ({
                     {!isLoadingSeasons && availableSeasons.length > 0 && (
                       <small className="text-muted d-block mt-2">
                         Leave all unchecked to request all missing seasons.
+                        Seasons already requested by other users can only be
+                        subscribed to.
                       </small>
                     )}
                   </div>
@@ -412,9 +627,31 @@ const RequestModal = ({
               <Button color="secondary" type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button color="primary" type="submit" disabled={isSubmitDisabled}>
-                {submitting ? 'Submitting…' : 'Submit Request'}
-              </Button>
+              {movieDuplicateBlocked ? (
+                <Button
+                  color={
+                    pendingMovieMatch &&
+                    isUserInSubscribers(pendingMovieMatch.subscribers ?? [])
+                      ? 'danger'
+                      : 'primary'
+                  }
+                  type="button"
+                  onClick={handleMovieRowAction}
+                >
+                  {pendingMovieMatch &&
+                  isUserInSubscribers(pendingMovieMatch.subscribers ?? [])
+                    ? 'Unsubscribe'
+                    : 'Notify Me'}
+                </Button>
+              ) : (
+                <Button
+                  color="primary"
+                  type="submit"
+                  disabled={isSubmitDisabled}
+                >
+                  {submitting ? 'Submitting…' : 'Submit Request'}
+                </Button>
+              )}
             </ModalFooter>
           </form>
         </Modal>
@@ -423,6 +660,7 @@ const RequestModal = ({
         <div className="request-modal-submit-alert">
           <Alert
             color={submitAlert.type}
+            fade={false}
             className="mb-0 alert-dismissible request-modal-submit-alert__alert"
             role="alert"
           >

@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Collapse, FormGroup, Label } from 'reactstrap';
+import { Collapse, FormGroup, Label, Spinner } from 'reactstrap';
 import { SortAscIcon, SortDescIcon } from '../components/icons';
 import LibraryResultCard from '../components/LibraryResultCard';
 import ResultCardSkeleton from '../components/ResultCardSkeleton';
 import { GroupedResult } from '../types';
-import { useApiFetch } from '../utils/api';
+import { parseItemsArray, useApiFetch } from '../utils/api';
 import './Home.css';
 
 type LibraryItem = {
@@ -24,6 +24,7 @@ type SortField = 'title' | 'year' | 'date' | 'duration';
 type SortDirection = 'asc' | 'desc';
 
 const LibraryPage = () => {
+  const PAGE_SIZE = 50;
   const { serverId, libraryKey, serverName, libraryName } = useParams<{
     serverId: string;
     libraryKey: string;
@@ -39,27 +40,44 @@ const LibraryPage = () => {
   const [contentRatingFilter, setContentRatingFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [visibleCount, setVisibleCount] = useState(20);
-  const itemsPerLoad = 20;
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const offsetRef = useRef(0);
+  const hasMoreRef = useRef(true);
+  const isLoadingMoreRef = useRef(false);
+  const loadingRef = useRef(false);
 
   const apiFetch = useApiFetch();
 
   useEffect(() => {
-    setVisibleCount(itemsPerLoad);
-  }, [contentRatingFilter, sortField, sortDirection]);
+    loadingRef.current = loading;
+  }, [loading]);
 
-  useEffect(() => {
-    const fetchLibraryItems = async () => {
-      setLoading(true);
-      setError(null);
+  const loadMoreItems = useCallback(
+    async (initial = false) => {
+      if (!serverId || !libraryKey || !serverName) return;
+      if (
+        !initial &&
+        (!hasMoreRef.current || isLoadingMoreRef.current || loadingRef.current)
+      )
+        return;
+
+      if (initial) setLoading(true);
+      else {
+        isLoadingMoreRef.current = true;
+        setIsLoadingMore(true);
+      }
+
       try {
+        const nextOffset = initial ? 0 : offsetRef.current;
         const response = await apiFetch(
-          `/api/servers/${serverId}/libraries/${libraryKey}`
+          `/api/servers/${serverId}/libraries/${libraryKey}?limit=${PAGE_SIZE}&offset=${nextOffset}`
         );
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
-        const data = (await response.json()) as LibraryItem[];
+        const data = parseItemsArray<LibraryItem>(await response.json());
 
         const groupedResults = data.map((item) => ({
           guid: item.guid,
@@ -72,23 +90,62 @@ const LibraryPage = () => {
           duration: item.duration,
           servers: [
             {
-              id: serverId!,
-              name: decodeURIComponent(serverName!),
+              id: serverId,
+              name: decodeURIComponent(serverName),
               ratingKey: item.ratingKey,
             },
           ],
         }));
 
-        setItems(groupedResults);
+        setItems((prev) =>
+          initial ? groupedResults : [...prev, ...groupedResults]
+        );
+        const next = nextOffset + PAGE_SIZE;
+        offsetRef.current = next;
+        const moreAvailable = data.length >= PAGE_SIZE;
+        hasMoreRef.current = moreAvailable;
+        setHasMore(moreAvailable);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'An unknown error occurred');
       } finally {
-        setLoading(false);
+        if (initial) setLoading(false);
+        else {
+          isLoadingMoreRef.current = false;
+          setIsLoadingMore(false);
+        }
       }
-    };
+    },
+    [PAGE_SIZE, apiFetch, libraryKey, serverId, serverName]
+  );
 
-    fetchLibraryItems();
-  }, [serverId, libraryKey, serverName, apiFetch]);
+  useEffect(() => {
+    if (!serverId || !libraryKey || !serverName) return;
+    setError(null);
+    setItems([]);
+    offsetRef.current = 0;
+    hasMoreRef.current = true;
+    isLoadingMoreRef.current = false;
+    setHasMore(true);
+    setIsLoadingMore(false);
+    void loadMoreItems(true);
+  }, [serverId, libraryKey, serverName, loadMoreItems]);
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (!first.isIntersecting) return;
+        void loadMoreItems(false);
+      },
+      { rootMargin: '240px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMoreItems]);
 
   const availableContentRatings = useMemo(() => {
     return [
@@ -133,11 +190,6 @@ const LibraryPage = () => {
         return sortDirection === 'asc' ? result : -result;
       });
   }, [items, contentRatingFilter, sortField, sortDirection]);
-
-  const visibleItems = useMemo(
-    () => sortedItems.slice(0, visibleCount),
-    [sortedItems, visibleCount]
-  );
 
   const FilterControls = () => (
     <div className="filter-controls-container p-3">
@@ -251,7 +303,7 @@ const LibraryPage = () => {
               ? Array.from({ length: 18 }).map((_, i) => (
                   <ResultCardSkeleton key={i} />
                 ))
-              : visibleItems.map((item) => (
+              : sortedItems.map((item) => (
                   <Link
                     to={`/media/${item.guid}`}
                     key={item.guid}
@@ -262,21 +314,15 @@ const LibraryPage = () => {
                   </Link>
                 ))}
           </div>
-          {!loading && visibleCount < sortedItems.length && (
-            <div className="d-flex justify-content-center mt-4 mb-5">
-              <button
-                type="button"
-                className="btn btn-outline-primary"
-                onClick={() =>
-                  setVisibleCount((prev) =>
-                    Math.min(prev + itemsPerLoad, sortedItems.length)
-                  )
-                }
-              >
-                Load more
-              </button>
-            </div>
-          )}
+          <div
+            ref={loadMoreRef}
+            className="d-flex justify-content-center mt-4 mb-5"
+          >
+            {isLoadingMore && <Spinner color="primary" />}
+            {!isLoadingMore && !hasMore && sortedItems.length > 0 && (
+              <span className="text-muted small">End of results</span>
+            )}
+          </div>
         </div>
       </div>
     </div>

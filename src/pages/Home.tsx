@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Alert,
@@ -8,6 +8,7 @@ import {
   Nav,
   NavItem,
   NavLink,
+  Spinner,
 } from 'reactstrap';
 import RequestModal from '../components/RequestModal';
 import ResultCard from '../components/ResultCard';
@@ -19,7 +20,7 @@ import {
   SearchResult,
   SystemInfo,
 } from '../types';
-import { searchDiscover, useApiFetch } from '../utils/api';
+import { parseItemsArray, searchDiscover, useApiFetch } from '../utils/api';
 
 type FilterType = 'all' | 'movie' | 'show';
 
@@ -27,6 +28,7 @@ type SortField = 'title' | 'year' | 'date' | 'duration';
 type SortDirection = 'asc' | 'desc';
 
 const Home = () => {
+  const PAGE_SIZE = 30;
   const [query, setQuery] = useState('');
   const [allResults, setAllResults] = useState<GroupedResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -34,9 +36,6 @@ const Home = () => {
   const [contentRatingFilter, setContentRatingFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [visibleLocalCount, setVisibleLocalCount] = useState(20);
-  const [visibleDiscoverCount, setVisibleDiscoverCount] = useState(20);
-  const itemsPerLoad = 20;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -44,11 +43,27 @@ const Home = () => {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [discoverResults, setDiscoverResults] = useState<DiscoverResult[]>([]);
   const [isDiscoverLoading, setIsDiscoverLoading] = useState(false);
+  const [isLoadingMoreLocal, setIsLoadingMoreLocal] = useState(false);
+  const [isLoadingMoreDiscover, setIsLoadingMoreDiscover] = useState(false);
+  const [hasMoreLocal, setHasMoreLocal] = useState(true);
+  const [hasMoreDiscover, setHasMoreDiscover] = useState(true);
   const [requestModalItem, setRequestModalItem] =
     useState<DiscoverResult | null>(null);
   const [activeTab, setActiveTab] = useState<'local' | 'discover'>('local');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const localOffsetRef = useRef(0);
+  const discoverOffsetRef = useRef(0);
+  const hasMoreLocalRef = useRef(true);
+  const hasMoreDiscoverRef = useRef(true);
+  const isLoadingMoreLocalRef = useRef(false);
+  const isLoadingMoreDiscoverRef = useRef(false);
+  const isDiscoverLoadingRef = useRef(false);
   const apiFetch = useApiFetch();
+
+  useEffect(() => {
+    isDiscoverLoadingRef.current = isDiscoverLoading;
+  }, [isDiscoverLoading]);
 
   const roundedTotal = systemInfo
     ? Math.floor((systemInfo.totalMovies + systemInfo.totalShows) / 100) * 100
@@ -138,11 +153,6 @@ const Home = () => {
       });
   }, [allResults, filterType, contentRatingFilter, sortField, sortDirection]);
 
-  const visibleLocalResults = useMemo(
-    () => displayedResults.slice(0, visibleLocalCount),
-    [displayedResults, visibleLocalCount]
-  );
-
   const localGuids = useMemo(() => {
     const guids = new Set<string>();
     allResults.forEach((r) => {
@@ -195,11 +205,6 @@ const Home = () => {
     });
   }, [filteredDiscoverResults, sortField, sortDirection]);
 
-  const visibleDiscoverResults = useMemo(
-    () => sortedFilteredDiscoverResults.slice(0, visibleDiscoverCount),
-    [sortedFilteredDiscoverResults, visibleDiscoverCount]
-  );
-
   const availableContentRatings = useMemo(() => {
     const localRatings = allResults
       .map((item) => item.contentRating)
@@ -211,78 +216,196 @@ const Home = () => {
   }, [allResults, discoverResults]);
 
   useEffect(() => {
-    setVisibleLocalCount(itemsPerLoad);
-    setVisibleDiscoverCount(itemsPerLoad);
-  }, [filterType, contentRatingFilter, sortField, sortDirection, query]);
-
-  useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedQuery(query);
     }, 400);
     return () => clearTimeout(handler);
   }, [query]);
 
+  const mergeSearchResults = useCallback(
+    (existing: GroupedResult[], incoming: SearchResult[]): GroupedResult[] => {
+      const items = Array.isArray(incoming) ? incoming : [];
+      const grouped = new Map(existing.map((item) => [item.guid, item]));
+      for (const item of items) {
+        if (!item.guid) continue;
+        if (grouped.has(item.guid)) {
+          const existingItem = grouped.get(item.guid)!;
+          const serverExists = existingItem.servers.some(
+            (s: { id: string }) => s.id === item.serverId
+          );
+          if (!serverExists) {
+            existingItem.servers.push({
+              id: item.serverId,
+              name: item.serverName,
+              ratingKey: item.ratingKey,
+            });
+          }
+        } else {
+          const { serverId, serverName, ratingKey, itemType, ...rest } = item;
+          grouped.set(item.guid, {
+            ...rest,
+            itemType,
+            servers: [{ id: serverId, name: serverName, ratingKey }],
+          });
+        }
+      }
+      return Array.from(grouped.values());
+    },
+    []
+  );
+
+  const loadMoreLocal = useCallback(
+    async (initial = false) => {
+      if (!debouncedQuery.trim()) return;
+      if (
+        !initial &&
+        (!hasMoreLocalRef.current || isLoadingMoreLocalRef.current || loading)
+      )
+        return;
+      if (initial) setLoading(true);
+      else {
+        isLoadingMoreLocalRef.current = true;
+        setIsLoadingMoreLocal(true);
+      }
+
+      try {
+        const nextOffset = initial ? 0 : localOffsetRef.current;
+        const response = await apiFetch(
+          `/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=${PAGE_SIZE}&offset=${nextOffset}`
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = parseItemsArray<SearchResult>(await response.json());
+
+        setAllResults((prev) => {
+          const merged = mergeSearchResults(initial ? [] : prev, data);
+          sessionStorage.setItem('lastSearchResults', JSON.stringify(merged));
+          sessionStorage.setItem('lastSearchQuery', debouncedQuery);
+          return merged;
+        });
+        const next = nextOffset + PAGE_SIZE;
+        localOffsetRef.current = next;
+        const hasMore = data.length >= PAGE_SIZE;
+        hasMoreLocalRef.current = hasMore;
+        setHasMoreLocal(hasMore);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'An unknown error occurred');
+      } finally {
+        if (initial) setLoading(false);
+        else {
+          isLoadingMoreLocalRef.current = false;
+          setIsLoadingMoreLocal(false);
+        }
+      }
+    },
+    [PAGE_SIZE, apiFetch, debouncedQuery, loading, mergeSearchResults]
+  );
+
+  const loadMoreDiscover = useCallback(
+    async (initial = false) => {
+      if (!debouncedQuery.trim()) return;
+      if (
+        !initial &&
+        (!hasMoreDiscoverRef.current ||
+          isLoadingMoreDiscoverRef.current ||
+          isDiscoverLoadingRef.current)
+      )
+        return;
+      if (initial) setIsDiscoverLoading(true);
+      else {
+        isLoadingMoreDiscoverRef.current = true;
+        setIsLoadingMoreDiscover(true);
+      }
+
+      try {
+        const nextOffset = initial ? 0 : discoverOffsetRef.current;
+        const data = await searchDiscover(
+          apiFetch,
+          debouncedQuery,
+          PAGE_SIZE,
+          nextOffset
+        );
+        setDiscoverResults((prev) => {
+          const combined = initial ? data : [...prev, ...data];
+          const deduped = new Map<string, DiscoverResult>();
+          combined.forEach((item) => {
+            const key = `${(item as { guid?: string }).guid ?? ''}-${item.ratingKey}`;
+            deduped.set(key, item);
+          });
+          return Array.from(deduped.values());
+        });
+        const next = nextOffset + PAGE_SIZE;
+        discoverOffsetRef.current = next;
+        const hasMore = data.length >= PAGE_SIZE;
+        hasMoreDiscoverRef.current = hasMore;
+        setHasMoreDiscover(hasMore);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'An unknown error occurred');
+      } finally {
+        if (initial) setIsDiscoverLoading(false);
+        else {
+          isLoadingMoreDiscoverRef.current = false;
+          setIsLoadingMoreDiscover(false);
+        }
+      }
+    },
+    [PAGE_SIZE, apiFetch, debouncedQuery]
+  );
+
   useEffect(() => {
     const search = async () => {
       if (!debouncedQuery.trim()) {
-        if (hasSearched) {
-          setAllResults([]);
-          setDiscoverResults([]);
-          sessionStorage.removeItem('lastSearchResults');
-          sessionStorage.removeItem('lastSearchQuery');
-          setHasSearched(false);
-        }
+        setAllResults([]);
+        setDiscoverResults([]);
+        localOffsetRef.current = 0;
+        discoverOffsetRef.current = 0;
+        hasMoreLocalRef.current = true;
+        hasMoreDiscoverRef.current = true;
+        isLoadingMoreLocalRef.current = false;
+        isLoadingMoreDiscoverRef.current = false;
+        setHasMoreLocal(true);
+        setHasMoreDiscover(true);
+        sessionStorage.removeItem('lastSearchResults');
+        sessionStorage.removeItem('lastSearchQuery');
+        setHasSearched(false);
         return;
       }
-      setLoading(true);
-      setIsDiscoverLoading(true);
+
       setError(null);
       setHasSearched(true);
+      setAllResults([]);
+      setDiscoverResults([]);
+      localOffsetRef.current = 0;
+      discoverOffsetRef.current = 0;
+      hasMoreLocalRef.current = true;
+      hasMoreDiscoverRef.current = true;
+      isLoadingMoreLocalRef.current = false;
+      isLoadingMoreDiscoverRef.current = false;
+      setHasMoreLocal(true);
+      setHasMoreDiscover(true);
+      setLoading(true);
+      setIsDiscoverLoading(true);
+
       try {
         const [searchResponse, discoverData] = await Promise.all([
-          apiFetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`),
-          searchDiscover(apiFetch, debouncedQuery),
+          apiFetch(
+            `/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=${PAGE_SIZE}&offset=0`
+          ),
+          searchDiscover(apiFetch, debouncedQuery, PAGE_SIZE, 0),
         ]);
         if (!searchResponse.ok)
           throw new Error(`HTTP error! Status: ${searchResponse.status}`);
-        const data = (await searchResponse.json()) as SearchResult[];
-        const grouped = new Map<string, GroupedResult>();
-        for (const item of data) {
-          if (!item.guid) continue;
-          if (grouped.has(item.guid)) {
-            const existing = grouped.get(item.guid)!;
-            const serverExists = existing.servers.some(
-              (s: { id: string }) => s.id === item.serverId
-            );
-            if (!serverExists) {
-              existing.servers.push({
-                id: item.serverId,
-                name: item.serverName,
-                ratingKey: item.ratingKey,
-              });
-            }
-          } else {
-            const { serverId, serverName, ratingKey, itemType, ...rest } = item;
-            grouped.set(item.guid, {
-              ...rest,
-              itemType,
-              servers: [
-                {
-                  id: serverId,
-                  name: serverName,
-                  ratingKey: ratingKey,
-                },
-              ],
-            });
-          }
-        }
-        const finalResults = Array.from(grouped.values());
-        setAllResults(finalResults);
+        const data = parseItemsArray<SearchResult>(await searchResponse.json());
+        const merged = mergeSearchResults([], data);
+        setAllResults(merged);
         setDiscoverResults(discoverData);
-        sessionStorage.setItem(
-          'lastSearchResults',
-          JSON.stringify(finalResults)
-        );
+        localOffsetRef.current = PAGE_SIZE;
+        discoverOffsetRef.current = PAGE_SIZE;
+        hasMoreLocalRef.current = data.length >= PAGE_SIZE;
+        hasMoreDiscoverRef.current = discoverData.length >= PAGE_SIZE;
+        setHasMoreLocal(data.length >= PAGE_SIZE);
+        setHasMoreDiscover(discoverData.length >= PAGE_SIZE);
+        sessionStorage.setItem('lastSearchResults', JSON.stringify(merged));
         sessionStorage.setItem('lastSearchQuery', debouncedQuery);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'An unknown error occurred');
@@ -292,8 +415,29 @@ const Home = () => {
       }
     };
 
-    search();
-  }, [debouncedQuery, apiFetch, hasSearched]);
+    void search();
+  }, [PAGE_SIZE, apiFetch, debouncedQuery, mergeSearchResults]);
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasSearched) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (!first.isIntersecting) return;
+        if (activeTab === 'local') {
+          void loadMoreLocal(false);
+          return;
+        }
+        void loadMoreDiscover(false);
+      },
+      { rootMargin: '240px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [activeTab, hasSearched, loadMoreDiscover, loadMoreLocal]);
 
   const FilterControls = () => (
     <div className="filter-controls-container p-3">
@@ -377,7 +521,7 @@ const Home = () => {
   return (
     <div className="container mt-4">
       {error && (
-        <Alert color="danger" toggle={() => setError(null)}>
+        <Alert color="danger" fade={false} toggle={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -457,7 +601,7 @@ const Home = () => {
                 </NavItem>
               </Nav>
 
-              {loading || isDiscoverLoading ? (
+              {(activeTab === 'local' ? loading : isDiscoverLoading) ? (
                 <div className="results-grid">
                   {Array.from({ length: 12 }).map((_, i) => (
                     <ResultCardSkeleton key={i} />
@@ -466,7 +610,7 @@ const Home = () => {
               ) : activeTab === 'local' ? (
                 <>
                   <div className="results-grid">
-                    {visibleLocalResults.map((item) => (
+                    {displayedResults.map((item) => (
                       <Link
                         to={`/media/${item.guid}`}
                         key={item.guid}
@@ -479,34 +623,14 @@ const Home = () => {
                       </Link>
                     ))}
                   </div>
-                  {visibleLocalCount < displayedResults.length && (
-                    <div className="d-flex justify-content-center mt-4 mb-5">
-                      <button
-                        type="button"
-                        className="btn btn-outline-primary"
-                        onClick={() =>
-                          setVisibleLocalCount((prev) =>
-                            Math.min(
-                              prev + itemsPerLoad,
-                              displayedResults.length
-                            )
-                          )
-                        }
-                      >
-                        Load more
-                      </button>
-                    </div>
-                  )}
                 </>
               ) : (
                 <div className="results-grid">
-                  {visibleDiscoverResults.map((item) => {
+                  {sortedFilteredDiscoverResults.map((item) => {
                     const plexThumbUrl = item.thumb?.startsWith('/')
                       ? `https://metadata.provider.plex.tv${item.thumb}`
                       : item.thumb;
-                    const thumbUrl = plexThumbUrl
-                      ? `/api/image/global?url=${encodeURIComponent(plexThumbUrl)}`
-                      : undefined;
+                    const thumbUrl = plexThumbUrl;
                     return (
                       <div
                         key={item.ratingKey}
@@ -532,25 +656,29 @@ const Home = () => {
                   })}
                 </div>
               )}
-              {activeTab === 'discover' &&
-                visibleDiscoverCount < sortedFilteredDiscoverResults.length && (
-                  <div className="d-flex justify-content-center mt-4 mb-5">
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary"
-                      onClick={() =>
-                        setVisibleDiscoverCount((prev) =>
-                          Math.min(
-                            prev + itemsPerLoad,
-                            sortedFilteredDiscoverResults.length
-                          )
-                        )
-                      }
-                    >
-                      Load more
-                    </button>
-                  </div>
+              <div
+                ref={loadMoreRef}
+                className="d-flex justify-content-center mt-4 mb-5"
+              >
+                {((activeTab === 'local' && isLoadingMoreLocal) ||
+                  (activeTab === 'discover' && isLoadingMoreDiscover)) && (
+                  <Spinner color="primary" />
                 )}
+                {activeTab === 'local' &&
+                  !loading &&
+                  !isLoadingMoreLocal &&
+                  !hasMoreLocal &&
+                  displayedResults.length > 0 && (
+                    <span className="text-muted small">End of results</span>
+                  )}
+                {activeTab === 'discover' &&
+                  !isDiscoverLoading &&
+                  !isLoadingMoreDiscover &&
+                  !hasMoreDiscover &&
+                  discoverResults.length > 0 && (
+                    <span className="text-muted small">End of results</span>
+                  )}
+              </div>
             </>
           )}
           {hasSearched &&

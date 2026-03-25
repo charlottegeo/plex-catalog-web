@@ -107,19 +107,22 @@ export default function Footer() {
                       Syncing database
                     </span>
                   ) : (
-                    <span>
-                      Last updated:{' '}
-                      <strong>
-                        {formatRelativeTime(systemInfo.lastUpdated)}
-                      </strong>
-                    </span>
+                    <>
+                      <span>
+                        Last updated:{' '}
+                        <strong>
+                          {formatRelativeTime(systemInfo.lastUpdated)}
+                        </strong>
+                      </span>
+                      <span className="mx-2 d-none d-md-inline text-opacity-25">
+                        |
+                      </span>
+                      <span className="d-block d-md-inline">
+                        Next sync in {getMinutesUntilNextSync(systemInfo)}{' '}
+                        minutes
+                      </span>
+                    </>
                   )}
-                  <span className="mx-2 d-none d-md-inline text-opacity-25">
-                    |
-                  </span>
-                  <span className="d-block d-md-inline">
-                    Next sync in {getMinutesUntilNextSync(systemInfo)} minutes
-                  </span>
                 </div>
               </div>
             ) : (

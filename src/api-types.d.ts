@@ -65,32 +65,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/requests/notifications/clear": {
+    "/api/requests/media/{guid}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** Mark all requests for a user as viewed/clear notifications. */
-        post: operations["clear_notifications_handler"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/requests/notifications/count": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get number of unread notifications for a user. */
-        get: operations["get_notification_count_handler"];
+        /** List active requests for a specific media guid. */
+        get: operations["get_active_requests_by_guid_handler"];
         put?: never;
         post?: never;
         delete?: never;
@@ -109,7 +92,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete the user's own pending request. */
+        /** Remove the current user from a request (same as unsubscribe). Deletes the request if no subscribers remain. */
         delete: operations["delete_request_handler"];
         options?: never;
         head?: never;
@@ -351,6 +334,15 @@ export interface components {
             /** @description Plex owner username (Plex's `sourceTitle`). */
             ownerUsername?: string | null;
         };
+        DiscoverResultsPage: {
+            items: Record<string, never>[];
+            /** Format: int64 */
+            limit: number;
+            /** Format: int64 */
+            offset: number;
+            /** Format: int64 */
+            total: number;
+        };
         EpisodeDetails: {
             contentRating?: string | null;
             /** Format: int64 */
@@ -431,6 +423,21 @@ export interface components {
             title: string;
             type: string;
         };
+        LibraryItemsPage: {
+            items: components["schemas"]["Item"][];
+            /** Format: int64 */
+            limit: number;
+            /** Format: int64 */
+            offset: number;
+            /** Format: int64 */
+            total: number;
+        };
+        LibraryItemsQuery: {
+            /** Format: int32 */
+            limit?: number | null;
+            /** Format: int32 */
+            offset?: number | null;
+        };
         Media: {
             Part?: components["schemas"]["Part"][];
             videoResolution?: string | null;
@@ -462,13 +469,14 @@ export interface components {
             isViewed: boolean;
             itemType: string;
             requestedResolution?: string | null;
-            requestedSeasons?: number[] | null;
+            /** Format: int32 */
+            requestedSeason?: number | null;
             serverNames?: string[] | null;
             status: string;
+            subscribers: string[];
             thumb?: string | null;
             title: string;
             updatedAt: string;
-            username: string;
             /** Format: int32 */
             year?: number | null;
         };
@@ -488,11 +496,6 @@ export interface components {
         MediaVersion: {
             subtitles: string[];
             videoResolution: string;
-        };
-        /** @description Number of unread notifications. */
-        NotificationCount: {
-            /** Format: int64 */
-            count: number;
         };
         Part: {
             Stream?: components["schemas"]["Stream"][];
@@ -532,6 +535,15 @@ export interface components {
             title: string;
             /** Format: int32 */
             year?: number | null;
+        };
+        SearchResultsPage: {
+            items: components["schemas"]["SearchResult"][];
+            /** Format: int64 */
+            limit: number;
+            /** Format: int64 */
+            offset: number;
+            /** Format: int64 */
+            total: number;
         };
         SeasonSummary: {
             artPath?: string | null;
@@ -601,13 +613,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Search results from Plex discover */
+            /** @description Paginated discover results */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DiscoverResultsPage"];
                 };
             };
         };
@@ -675,51 +687,36 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Created or updated request */
+            /** @description Created or updated requests */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MediaRequest"];
+                    "application/json": components["schemas"]["MediaRequest"][];
                 };
             };
         };
     };
-    clear_notifications_handler: {
+    get_active_requests_by_guid_handler: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Notifications cleared */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
+            path: {
+                /** @description Media GUID (full or normalized) */
+                guid: string;
             };
-        };
-    };
-    get_notification_count_handler: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Unread notification count */
+            /** @description List of active requests for this media */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotificationCount"];
+                    "application/json": components["schemas"]["MediaRequest"][];
                 };
             };
         };
@@ -729,22 +726,22 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Request ID to delete */
+                /** @description Request ID */
                 id: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Request deleted */
+            /** @description Removed */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Request not found or does not belong to user */
-            403: {
+            /** @description Not subscribed */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -768,13 +765,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Search results */
+            /** @description Paginated search results */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SearchResult"][];
+                    "application/json": components["schemas"]["SearchResultsPage"];
                 };
             };
         };
@@ -962,7 +959,12 @@ export interface operations {
     };
     get_library_items_handler: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Max results to return */
+                limit?: number | null;
+                /** @description Result offset (for pagination/infinite scroll) */
+                offset?: number | null;
+            };
             header?: never;
             path: {
                 /** @description Server ID (Plex client identifier) */
@@ -974,13 +976,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of library items */
+            /** @description Paginated library items */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Item"][];
+                    "application/json": components["schemas"]["LibraryItemsPage"];
                 };
             };
             /** @description Server not found */

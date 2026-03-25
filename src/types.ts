@@ -2,6 +2,7 @@ import { components } from './api-types';
 
 export type DbServer = components['schemas']['DbServer'];
 export type MediaRequestPayload = components['schemas']['MediaRequestPayload'];
+/** Flat request row: use `subscribers` (no single requester). Per-row `requestedSeason` for TV. */
 export type MediaRequest = components['schemas']['MediaRequest'];
 export type SystemInfo = components['schemas']['SystemInfo'];
 export type Library = components['schemas']['Library'];

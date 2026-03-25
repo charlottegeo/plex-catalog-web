@@ -57,7 +57,7 @@ function AppContent({ rerouteHomeOn404 = undefined }: Props) {
 
 export default function App({ rerouteHomeOn404 = undefined }: Props) {
   return (
-    <Router>
+    <Router future={{ v7_relativeSplatPath: true }}>
       <AppContent rerouteHomeOn404={rerouteHomeOn404} />
     </Router>
   );

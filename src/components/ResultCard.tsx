@@ -190,7 +190,7 @@ const ResultCard = ({
           }
         }
       },
-      { rootMargin: '50px' }
+      { rootMargin: '600px' }
     );
 
     observer.observe(cardRef.current);

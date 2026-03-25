@@ -44,7 +44,7 @@ const LibraryResultCard = ({ item }: LibraryResultCardProps) => {
           }
         }
       },
-      { rootMargin: '100px' }
+      { rootMargin: '600px' }
     );
 
     observer.observe(cardRef.current);

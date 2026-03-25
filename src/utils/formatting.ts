@@ -71,6 +71,22 @@ export const formatExtraType = (extraType?: string | null): string => {
   return extraType.charAt(0).toUpperCase() + extraType.slice(1).toLowerCase();
 };
 
+export function formatSubscriberList(names: string[]): string {
+  if (names.length === 0) return '—';
+  const maxLen = 52;
+  for (let take = names.length; take > 0; take--) {
+    const parts = names.slice(0, take);
+    const suffix = take < names.length ? ` +${names.length - take}` : '';
+    const candidate = `${parts.join(', ')}${suffix}`;
+    if (candidate.length <= maxLen) return candidate;
+  }
+  const [first] = names;
+  if (names.length === 1) {
+    return first.length <= maxLen ? first : `${first.slice(0, maxLen - 3)}...`;
+  }
+  return `${first.slice(0, 20)}… +${names.length - 1}`;
+}
+
 export const formatRelativeTime = (dateString?: string | null): string => {
   if (!dateString) return 'Never';
   const date = new Date(dateString);
