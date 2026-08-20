@@ -117,10 +117,22 @@ export const submitMediaRequest = async (
   return response.json();
 };
 
+export type FetchMediaRequestsParams = {
+  status?: 'pending' | 'fulfilled';
+  sortBy?: 'createdAt' | 'fulfilledAt';
+  sortOrder?: 'asc' | 'desc';
+};
+
 export const fetchMediaRequests = async (
-  apiFetch: ApiFetch
+  apiFetch: ApiFetch,
+  params?: FetchMediaRequestsParams
 ): Promise<MediaRequest[]> => {
-  const response = await apiFetch('/api/requests');
+  const search = new URLSearchParams();
+  if (params?.status) search.set('status', params.status);
+  if (params?.sortBy) search.set('sortBy', params.sortBy);
+  if (params?.sortOrder) search.set('sortOrder', params.sortOrder);
+  const qs = search.toString();
+  const response = await apiFetch(`/api/requests${qs ? `?${qs}` : ''}`);
   if (!response.ok) throw new Error('Failed to fetch requests');
   return parseItemsArray<MediaRequest>(await response.json());
 };

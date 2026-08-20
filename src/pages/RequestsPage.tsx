@@ -17,6 +17,7 @@ import {
   useApiFetch,
 } from '../utils/api';
 import {
+  formatDate,
   formatDuration,
   formatResolution,
   formatSubscriberList,
@@ -46,19 +47,18 @@ function sortRequestsInGroup(items: MediaRequest[]): MediaRequest[] {
 
 function groupRequestsByGuid(requests: MediaRequest[]): GroupedMedia[] {
   const map = new Map<string, MediaRequest[]>();
+  const order: string[] = [];
   for (const r of requests) {
-    const list = map.get(r.guid) ?? [];
-    list.push(r);
-    map.set(r.guid, list);
+    if (!map.has(r.guid)) {
+      order.push(r.guid);
+      map.set(r.guid, []);
+    }
+    map.get(r.guid)!.push(r);
   }
-  return Array.from(map.entries())
-    .map(([guid, items]) => ({
-      guid,
-      requests: sortRequestsInGroup(items),
-    }))
-    .sort((a, b) =>
-      (a.requests[0]?.title ?? '').localeCompare(b.requests[0]?.title ?? '')
-    );
+  return order.map((guid) => ({
+    guid,
+    requests: sortRequestsInGroup(map.get(guid)!),
+  }));
 }
 
 function rowLabel(req: MediaRequest): string {
@@ -71,6 +71,17 @@ function rowLabel(req: MediaRequest): string {
     return `Season ${req.requestedSeason}`;
   }
   return 'Show';
+}
+
+function latestFulfilledAt(requests: MediaRequest[]): string | null {
+  let latest: string | null = null;
+  for (const r of requests) {
+    if (!r.fulfilledAt) continue;
+    if (!latest || new Date(r.fulfilledAt) > new Date(latest)) {
+      latest = r.fulfilledAt;
+    }
+  }
+  return latest;
 }
 
 type RequestThumbnailProps = {
@@ -164,7 +175,11 @@ const RequestsPage = () => {
 
   const loadRequests = useCallback(async () => {
     try {
-      const data = await fetchMediaRequests(apiFetch);
+      const data = await fetchMediaRequests(apiFetch, {
+        status: activeTab,
+        sortBy: activeTab === 'pending' ? 'createdAt' : 'fulfilledAt',
+        sortOrder: 'desc',
+      });
       setRequests(data);
     } catch (e) {
       setError(
@@ -173,7 +188,7 @@ const RequestsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [apiFetch]);
+  }, [apiFetch, activeTab]);
 
   useEffect(() => {
     const init = async () => {
@@ -182,19 +197,9 @@ const RequestsPage = () => {
       await loadRequests();
     };
     init();
-  }, [apiFetch, loadRequests]);
+  }, [loadRequests]);
 
-  const filteredRequests = useMemo(() => {
-    if (activeTab === 'pending') {
-      return requests.filter((r) => r.status.toLowerCase() === 'pending');
-    }
-    return requests.filter((r) => r.status.toLowerCase() !== 'pending');
-  }, [requests, activeTab]);
-
-  const groupedMedia = useMemo(
-    () => groupRequestsByGuid(filteredRequests),
-    [filteredRequests]
-  );
+  const groupedMedia = useMemo(() => groupRequestsByGuid(requests), [requests]);
 
   const handleSubscribe = async (requestId: number) => {
     try {
@@ -268,7 +273,7 @@ const RequestsPage = () => {
           <Spinner color="primary" />
         </div>
       ) : (
-        <div className="results-grid">
+        <div className="results-grid results-grid--variable-height">
           {groupedMedia.map((group) => {
             const first = group.requests[0];
             const plexThumbUrl = first.thumb?.startsWith('/')
@@ -280,7 +285,7 @@ const RequestsPage = () => {
             const anyUpgrade = group.requests.some((r) => r.isUpgrade);
 
             const cardContent = (
-              <div className="position-relative d-flex flex-column h-100">
+              <div className="position-relative d-flex flex-column">
                 {first.thumb ? (
                   thumbUrl ? (
                     <RequestThumbnail src={thumbUrl} alt={first.title} />
@@ -320,19 +325,26 @@ const RequestsPage = () => {
                     <NewIcon />
                   )}
                 </span>
-                <div className="card-body p-2 d-flex flex-column flex-grow-1">
+                <div className="card-body p-2 d-flex flex-column">
                   <h3 className="card-title h6 mb-1 text-dark">
                     {first.title}
                   </h3>
                   {isFulfilled && (
-                    <small className="d-block text-muted mb-2">
-                      Available on:{' '}
-                      {[
-                        ...new Set(
-                          group.requests.flatMap((r) => r.serverNames ?? [])
-                        ),
-                      ].join(', ') || 'Unknown Server'}
-                    </small>
+                    <>
+                      <small className="d-block text-muted mb-1">
+                        Fulfilled:{' '}
+                        {formatDate(latestFulfilledAt(group.requests) ?? '') ||
+                          '—'}
+                      </small>
+                      <small className="d-block text-muted mb-2">
+                        Available on:{' '}
+                        {[
+                          ...new Set(
+                            group.requests.flatMap((r) => r.serverNames ?? [])
+                          ),
+                        ].join(', ') || 'Unknown Server'}
+                      </small>
+                    </>
                   )}
                   <p
                     className="card-year text-muted small mb-2 d-flex align-items-center flex-wrap"
@@ -358,7 +370,7 @@ const RequestsPage = () => {
                       )}
                   </p>
 
-                  <div className="request-group-rows mt-auto">
+                  <div className="request-group-rows">
                     {group.requests.map((req) => (
                       <div
                         key={req.id}
@@ -412,10 +424,10 @@ const RequestsPage = () => {
                 to={mediaPath}
                 className="result-link text-decoration-none"
               >
-                <div className="card result-card h-100">{cardContent}</div>
+                <div className="card result-card">{cardContent}</div>
               </Link>
             ) : (
-              <div key={group.guid} className="card result-card h-100">
+              <div key={group.guid} className="card result-card">
                 {cardContent}
               </div>
             );

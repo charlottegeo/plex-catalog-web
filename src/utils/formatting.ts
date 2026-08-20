@@ -98,3 +98,29 @@ export const formatRelativeTime = (dateString?: string | null): string => {
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
   return date.toLocaleDateString();
 };
+
+export const SERVER_STATUS_ONLINE = 0;
+
+const SERVER_STATUS_LABELS: Record<number, string> = {
+  0: 'Online',
+  1: 'Unreachable',
+  2: 'Timeout / slow',
+  3: 'TLS / certificate',
+  4: 'No remote connection',
+  5: 'HTTP error',
+};
+
+export function isServerOnline(status: number): boolean {
+  return status === SERVER_STATUS_ONLINE;
+}
+
+export function formatServerStatus(status: number): string {
+  return SERVER_STATUS_LABELS[status] ?? `Unknown (${status})`;
+}
+
+export function formatStatusSince(statusSince?: string | null): string {
+  if (!statusSince) return '';
+  const relative = formatRelativeTime(statusSince);
+  if (relative === 'Never') return '';
+  return `since ${relative}`;
+}

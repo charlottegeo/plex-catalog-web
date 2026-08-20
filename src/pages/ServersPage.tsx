@@ -3,6 +3,7 @@ import { Alert, Spinner } from 'reactstrap';
 import ServerItem from '../components/ServerItem';
 import { DbServer, Library } from '../types';
 import { parseItemsArray, useApiFetch } from '../utils/api';
+import { isServerOnline } from '../utils/formatting';
 import './ServersPage.css';
 
 const ServersPage = () => {
@@ -34,7 +35,7 @@ const ServersPage = () => {
 
   const toggleServerLibraries = async (serverId: string) => {
     const server = servers.find((s) => s.id === serverId);
-    if (!server || !server.isOnline) {
+    if (!server || !isServerOnline(server.status)) {
       return;
     }
 
@@ -55,8 +56,14 @@ const ServersPage = () => {
     }
   };
 
-  const onlineServers = servers.filter((s) => s.isOnline);
-  const offlineServers = servers.filter((s) => !s.isOnline);
+  const byName = (a: DbServer, b: DbServer) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  const onlineServers = servers
+    .filter((s) => isServerOnline(s.status))
+    .sort(byName);
+  const unavailableServers = servers
+    .filter((s) => !isServerOnline(s.status))
+    .sort(byName);
 
   return (
     <div className="container mt-4">
@@ -96,14 +103,14 @@ const ServersPage = () => {
             <div className="servers-offline-section">
               <div className="mb-4">
                 <h2 className="mb-1">
-                  Offline{' '}
+                  Unavailable{' '}
                   <small className="text-muted">(Wall of Shame)</small>{' '}
                 </h2>
               </div>
-              {offlineServers.length === 0 ? (
+              {unavailableServers.length === 0 ? (
                 <p className="text-muted">All servers are online!</p>
               ) : (
-                offlineServers.map((server) => (
+                unavailableServers.map((server) => (
                   <ServerItem
                     key={server.id}
                     server={server}

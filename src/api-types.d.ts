@@ -51,7 +51,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all media requests (both pending and fulfilled). */
+        /** List media requests (pending and/or fulfilled), optionally filtered and sorted by date. */
         get: operations["get_all_requests_handler"];
         put?: never;
         /**
@@ -128,7 +128,7 @@ export interface paths {
         };
         /**
          * List all Plex servers known to the catalog.
-         * @description Returns servers from the PostgreSQL database. Includes connection info and online status.
+         * @description Each server includes "status" / "statusSince" (see "server_status" module).
          */
         get: operations["get_servers_handler"];
         put?: never;
@@ -148,7 +148,7 @@ export interface paths {
         };
         /**
          * Proxy or resize an image from a Plex server.
-         * @description Images are cached. Optional `width` and `height` query params trigger transcoding to that size.
+         * @description Images are cached. Optional "width" and "height" query params trigger transcoding to that size.
          */
         get: operations["get_image_handler"];
         put?: never;
@@ -268,7 +268,7 @@ export interface paths {
         };
         /**
          * List episodes for a season.
-         * @description Returns episodes from the catalog with version and subtitle info. Season_id can be a season rating key or the show rating key when there are no seasons.
+         * @description Returns episodes from the catalog with resolution and subtitle info. Season_id can be a season rating key or the show rating key when there are no seasons (like a mini-series)
          */
         get: operations["get_episodes_handler"];
         put?: never;
@@ -327,12 +327,18 @@ export interface components {
             accessToken: string;
             connectionUri: string;
             id: string;
-            isOnline: boolean;
             lastSeen: string;
-            /** @description Server name/nickname. */
+            /** @description Server name/nickname */
             name: string;
-            /** @description Plex owner username (Plex's `sourceTitle`). */
+            /** @description Plex owner username (Plex's "sourceTitle") */
             ownerUsername?: string | null;
+            /**
+             * Format: int32
+             * @description Availability: 0 = online, 1 = unreachable, 2 = timeout, 3 = tls, 4 = no connection, 5 = http error
+             */
+            status: number;
+            /** @description When the current non-online status began; null while online */
+            statusSince?: string | null;
         };
         DiscoverResultsPage: {
             items: Record<string, never>[];
@@ -361,14 +367,14 @@ export interface components {
             /** Format: int32 */
             width?: number | null;
         };
-        /** @description Plex library item (movie, show, episode, extra, etc). */
+        /** @description Plex library item (movie, show, episode, extra, etc) */
         Item: {
             Media?: components["schemas"]["Media"][];
             art?: string | null;
             contentRating?: string | null;
             /** Format: int64 */
             duration?: number | null;
-            /** @description Plex extra type (e.g. "trailer", "behindTheScenes") when item_type is "extra". */
+            /** @description Plex extra type (e.g. "trailer", "behindTheScenes") when item_type is "extra" */
             extraType?: string | null;
             guid?: string | null;
             /** Format: int32 */
@@ -417,7 +423,7 @@ export interface components {
             /** Format: int32 */
             year?: number;
         };
-        /** @description Plex library section (movies, shows, etc). */
+        /** @description Plex library section (movies, shows, etc) */
         Library: {
             key: string;
             title: string;
@@ -457,11 +463,12 @@ export interface components {
             /** Format: int32 */
             year?: number | null;
         };
-        /** @description Media request from the database. */
+        /** @description Media request from the database */
         MediaRequest: {
             createdAt: string;
             /** Format: int64 */
             duration?: number | null;
+            fulfilledAt?: string | null;
             guid: string;
             /** Format: int32 */
             id: number;
@@ -502,14 +509,23 @@ export interface components {
             /** Format: int64 */
             id: number;
         };
-        /** @description Single bonus feature/extra from the database. */
+        /** @description Single bonus feature/extra from the database */
         PlexExtra: {
-            /** @description Plex extra type (e.g. "trailer", "behindTheScenes", "deleted_scene"). */
+            /** @description Plex extra type (e.g. "trailer", "behindTheScenes", "deleted_scene") */
             extraType?: string | null;
             key: string;
             ratingKey?: string | null;
             thumb?: string | null;
             title: string;
+        };
+        /** @description Query params for listing media requests */
+        RequestsQuery: {
+            /** @description "createdAt" (default) or "fulfilledAt" */
+            sortBy?: string | null;
+            /** @description "asc" or "desc" (default "desc") */
+            sortOrder?: string | null;
+            /** @description Filter: "pending", "fulfilled", or omit for all */
+            status?: string | null;
         };
         SearchQuery: {
             /** Format: int32 */
@@ -656,14 +672,21 @@ export interface operations {
     };
     get_all_requests_handler: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter: pending | fulfilled */
+                status?: string | null;
+                /** @description createdAt (default) | fulfilledAt */
+                sortBy?: string | null;
+                /** @description asc | desc (default desc) */
+                sortOrder?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description List of all requests */
+            /** @description List of requests */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1017,7 +1040,7 @@ export interface operations {
                     "application/json": components["schemas"]["EpisodeDetails"][];
                 };
             };
-            /** @description Server not found */
+            /** @description Server or season not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1049,7 +1072,7 @@ export interface operations {
                     "application/json": components["schemas"]["SeasonSummary"][];
                 };
             };
-            /** @description Server not found */
+            /** @description Server or show not found */
             404: {
                 headers: {
                     [name: string]: unknown;

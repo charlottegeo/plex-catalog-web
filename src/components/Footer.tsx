@@ -83,7 +83,8 @@ export default function Footer() {
                   </span>
                   <span className="mr-3">
                     <strong>{systemInfo.onlineServers}</strong> Online +{' '}
-                    <strong>{systemInfo.offlineServers}</strong> Offline Servers
+                    <strong>{systemInfo.offlineServers}</strong> Unavailable
+                    Servers
                   </span>
                 </div>
 
